@@ -1,0 +1,6 @@
+glm/
+build/
+.vscode
+.DS_Store
+*.a
+sample.runme

@@ -1,0 +1,38 @@
+#!/bin/bash
+
+make
+
+./sample.runme &
+
+SAMPLE_PID_T=$!
+
+echo $SAMPLE_PID_T
+
+while true; do
+
+  fswatch ./* -e "sample.runme" -1
+
+  echo "Change detected. Restarting make..."
+
+  kill -9 $SAMPLE_PID_T
+
+  # get time created on file
+
+  timeCreated=$(stat -f "%m" ./sample.runme)
+
+  make
+
+  newTimeCreated=$(stat -f "%m" ./sample.runme)
+
+  if [ $timeCreated -eq $newTimeCreated ]; then
+    echo "Must be error in code: no change in file"
+    continue
+  fi
+
+  ./sample.runme &
+
+  SAMPLE_PID_T=$!
+
+  echo $SAMPLE_PID_T
+
+done
