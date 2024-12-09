@@ -1,21 +1,21 @@
 #include "pairings.h"
 
-int pairing(int a, int b) {
+uint pairing(uint a, uint b) {
   return (a + b) * (a + b + 1) / 2 + b;
 }
 
-int pairing3(int a, int b, int c) {
+uint pairing3(uint a, uint b, uint c) {
   return pairing(pairing(a, b), c);
 }
 
-std::pair<int, int> reverse_pairing(int z) {
-  int w = (int)(std::floor((std::sqrt(8.0 * z + 1) - 1) / 2));
-  int b = z - (w * (w + 1)) / 2;
-  int a = w - b;
+std::pair<uint, uint> reverse_pairing(uint z) {
+  uint w = (uint)(std::floor((std::sqrt(8.0 * z + 1) - 1) / 2));
+  uint b = z - (w * (w + 1)) / 2;
+  uint a = w - b;
   return {a, b};
 }
 
-std::tuple<int, int, int> reverse_pairing3(int z) {
+std::tuple<uint, uint, uint> reverse_pairing3(uint z) {
   auto [z1, c] = reverse_pairing(z);
   auto [a, b] = reverse_pairing(z1);
   return {a, b, c};

@@ -16,6 +16,7 @@
 #include "imgui.h"
 #include "imgui_impl_glut.h"
 #include "imgui_impl_opengl2.h"
+#include "imgui_internal.h"
 #include "imnodes/imnodes.h"
 
 #ifdef __APPLE__
@@ -203,6 +204,8 @@ void MouseButton(int, int, int, int);
 void MouseMotion(int, int);
 void MouseMotionPassive(int, int);
 void Reset();
+void ExitProgram();
+void ExitEffects();
 void Resize(int, int);
 void Visibility(int);
 
@@ -231,6 +234,9 @@ void Axes(float);
 #include "utils/particles.h"
 // #include "utils/pillpath.cpp"
 // #include "utils/setlight.cpp"
+#include "editor/debug.h"
+#include "editor/nodes/graph.h"
+#include "editor/nodes/nodes.h"
 #include "utils/setmaterial.h"
 #include "utils/simplex.h"
 #include "utils/utils.h"
@@ -251,6 +257,8 @@ int main(int argc, char *argv[]) {
 
   InitImGui();
 
+  NodeEditor::load();
+
   // create the display lists that **will not change**:
 
   InitLists();
@@ -266,14 +274,21 @@ int main(int argc, char *argv[]) {
 
   InitMenus();
 
-  // draw the scene once and wait for some interaction:
-  // (this will never return)
+  atexit(ExitEffects);
 
   glutSetWindow(MainWindow);
   glutMainLoop();
+  return 0;
+}
 
-  // glutMainLoop( ) never actually returns
-  // the following line is here to make the compiler happy:
+void ExitEffects() {
+  printf("Exiting\n");
+
+  NodeEditor::save();
+
+  glutSetWindow(MainWindow);
+  glFinish();
+  glutDestroyWindow(MainWindow);
 
   // Cleanup
   ImGui_ImplOpenGL2_Shutdown();
@@ -281,9 +296,12 @@ int main(int argc, char *argv[]) {
   ImGui::DestroyContext();
   ImNodes::DestroyContext();
 
-  NodeEditor::save();
+  printf("Exitted\n");
+}
 
-  return 0;
+void ExitProgram() {
+  ExitEffects();
+  exit(0);
 }
 
 // this is where one would put code that is to be called
@@ -303,7 +321,9 @@ void Animate() {
     delta_time = (ms - scene_ms) / 1000.f;
     scene_ms = ms;
 
-    // Yrot += 2 * delta_time;
+    if (Debug::autoRotate) {
+      Yrot += 2 * delta_time;
+    }
   }
 
   // for example, if you wanted to spin an object in Display( ), you might call: glRotatef( 360.f*Time,   0., 1., 0. );
@@ -341,11 +361,6 @@ void rescale_framebuffer(float width, float height) {
 
 // MARK: DisplayImGui
 
-// Our state
-static bool show_demo_window = true;
-static bool show_another_window = false;
-static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
 void DisplayImGui() {
   // printf("DisplayImGui\n");
   // Start the Dear ImGui frame
@@ -354,10 +369,8 @@ void DisplayImGui() {
   ImGui::NewFrame();
   ImGuiIO &io = ImGui::GetIO();
 
-  // static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_NoDockingOverCentralNode | ImGuiDockNodeFlags_NoUndocking | ImGuiDockNodeFlags_PassthruCentralNode;
   static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_NoDockingOverCentralNode;
-  // static ImGuiDockNodeFlags dockspace_flags = 0;
-  ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+  ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking;
   const ImGuiViewport *viewport = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(viewport->WorkPos);
   ImGui::SetNextWindowSize(viewport->WorkSize);
@@ -376,17 +389,7 @@ void DisplayImGui() {
   ImGuiID dockspace_id = ImGui::GetID("FullWindowDockSpace");
   ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 
-  if (ImGui::BeginMenuBar()) {
-    if (ImGui::BeginMenu("Options")) {
-      // Disabling fullscreen would allow the window to be moved to the front of other windows,
-      // which we can't undo at the moment without finer window depth/z control.
-      ImGui::Separator();
-      ImGui::Separator();
-
-      // if (ImGui::MenuItem("Close", NULL, false, p_open != NULL))
-      //     *p_open = false;
-      ImGui::EndMenu();
-    }
+  if (ImGui::BeginMainMenuBar()) {
     ImGui::TextDisabled("(?)");
     if (ImGui::BeginItemTooltip()) {
       ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
@@ -408,50 +411,31 @@ void DisplayImGui() {
       ImGui::EndTooltip();
     }
 
-    ImGui::EndMenuBar();
+    ImGui::SameLine(ImGui::GetWindowWidth() - 60);
+    if (ImGui::MenuItem("Quit", "Alt+F4")) {
+      printf("Quit\n");
+      ExitProgram();
+    }
+
+    ImGui::EndMainMenuBar();
   }
 
   ImGui::End();
 
   // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-  if (show_demo_window)
-    ImGui::ShowDemoWindow(&show_demo_window);
+  if (Debug::showDemoWindow)
+    ImGui::ShowDemoWindow(&Debug::showDemoWindow);
 
   // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-  {
-    static float f = 0.0f;
-    static int counter = 0;
 
-    ImGui::Begin("Hello, world!");  // Create a window called "Hello, world!" and append into it.
-
-    ImGui::Text("This is some useful text.");           // Display some text (you can use a format strings too)
-    ImGui::Checkbox("Demo Window", &show_demo_window);  // Edit bools storing our window open/close state
-    ImGui::Checkbox("Another Window", &show_another_window);
-
-    ImGui::SliderFloat("float", &f, 0.0f, 1.0f);              // Edit 1 float using a slider from 0.0f to 1.0f
-    ImGui::ColorEdit3("clear color", (float *)&clear_color);  // Edit 3 floats representing a color
-
-    if (ImGui::Button("Button"))  // Buttons return true when clicked (most widgets return true when edited/activated)
-      counter++;
-    ImGui::SameLine();
-    ImGui::Text("counter = %d", counter);
-
-    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+  LightsEditor::ShowLightsPanel();
+  Debug::ShowDebugPanel();
+  if (ImGui::Begin("Debug")) {
+    ImGui::DragFloat("Scale", &Scale, 0.01f, 0.f, 10.f);
     ImGui::End();
   }
-
-  // 3. Show another simple window.
-  if (show_another_window) {
-    ImGui::Begin("Another Window", &show_another_window);  // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-    ImGui::Text("Hello from another window!");
-    if (ImGui::Button("Close Me"))
-      show_another_window = false;
-    ImGui::End();
-  }
-
-  ShowLightsPanel();
-
   NodeEditor::ShowNodesPanel();
+  NodeEditor::ShowGroupsPanel();
 
   static ImGuiWindowFlags scene_window_flags = ImGuiWindowFlags_NoTitleBar;
   ImGuiWindowClass scene_window_class;
@@ -483,6 +467,8 @@ void DisplayImGui() {
       ImVec2(0, 1),
       ImVec2(1, 0));
 
+  ImGui::Text("%.1f FPS (%.3f ms)", io.Framerate, 1000.0f / io.Framerate);
+
   ImGuiSceneRenderHovered = ImGui::IsWindowHovered();
 
   ImGui::EndChild();
@@ -510,14 +496,24 @@ void Display() {
 
   // erase the background:
   glDrawBuffer(GL_BACK);
-  glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+  glClearColor(LightsEditor::clearColor[0] * LightsEditor::clearColor[3], LightsEditor::clearColor[1] * LightsEditor::clearColor[3], LightsEditor::clearColor[2] * LightsEditor::clearColor[3], LightsEditor::clearColor[3]);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   glEnable(GL_DEPTH_TEST);
 
   // specify shading to be flat:
 
-  glShadeModel(GL_FLAT);
+  if (Debug::flatShading) {
+    glShadeModel(GL_FLAT);
+  } else {
+    glShadeModel(GL_SMOOTH);
+  }
+
+  if (Debug::showWireframe) {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  } else {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  }
 
   // set the viewport to be a square centered in the window:
   // TODO: Change to be the size of a ImGUI window
@@ -595,19 +591,45 @@ void Display() {
 
   glShadeModel(GL_FLAT);
   glEnable(GL_TEXTURE_2D);
-  glEnable(GL_LIGHTING);
-
+  if (Debug::lightingEnabled) {
+    glEnable(GL_LIGHTING);
+  }
   //***************************************************************************
 
+  // // glTranslatef(0.f, -0.5f, -1.f);
+  // OsuTorus(1.f, 2.f, 100.f, 15.f);
+  // glPopMatrix();
+
   glPushMatrix();
-  // glTranslatef(0.f, -0.5f, -1.f);
-  OsuTorus(1.f, 2.f, 100.f, 15.f);
+
+  glBegin(GL_TRIANGLES);
+
+  const std::shared_ptr<NodeEditor::Socket> output = NodeEditor::Graph::graph.outputNode->getOutput();
+  auto &vertices = std::get<std::vector<NodeEditor::Vertex>>(output->value);
+  for (NodeEditor::Vertex vertex : vertices) {
+    glNormal3f(vertex.normal.x, vertex.normal.y, vertex.normal.z);
+    glColor3f(vertex.color.r, vertex.color.g, vertex.color.b);
+    glVertex3f(vertex.position.x, vertex.position.y, vertex.position.z);
+  }
+
+  glEnd();
+
   glPopMatrix();
 
-  DisplayLights();
+  LightsEditor::DisplayLights();
 
   glDisable(GL_TEXTURE_2D);
   glDisable(GL_LIGHTING);
+
+  if (Debug::showNormals) {
+    glColor3f(1.f, 1.f, 1.f);
+    for (NodeEditor::Vertex vertex : vertices) {
+      glBegin(GL_LINES);
+      glVertex3f(vertex.position.x, vertex.position.y, vertex.position.z);
+      glVertex3f(vertex.position.x + vertex.normal.x, vertex.position.y + vertex.normal.y, vertex.position.z + vertex.normal.z);
+      glEnd();
+    }
+  }
 
   // draw some gratuitous text that just rotates on top of the scene:
   // i commented out the actual text-drawing calls -- put them back in if you have a use for them
@@ -712,25 +734,6 @@ void DoDepthMenu(int id) {
 // main menu callback:
 // MARK: DoMainMenu
 void DoMainMenu(int id) {
-  switch (id) {
-    case RESET:
-      Reset();
-      break;
-
-    case QUIT:
-      // gracefully close out the graphics:
-      // gracefully close the graphics window:
-      // gracefully exit the program:
-      glutSetWindow(MainWindow);
-      glFinish();
-      glutDestroyWindow(MainWindow);
-      exit(0);
-      break;
-
-    default:
-      fprintf(stderr, "Don't know what to do with Main Menu ID %d\n", id);
-  }
-
   glutSetWindow(MainWindow);
   glutPostRedisplay();
 }
@@ -840,10 +843,6 @@ void InitMenus() {
   glutAddMenuEntry("Reset", RESET);
   glutAddSubMenu("Debug", debugmenu);
   glutAddMenuEntry("Quit", QUIT);
-
-  // attach the pop-up menu to the right mouse button:
-
-  glutAttachMenu(GLUT_RIGHT_BUTTON);
 }
 
 // initialize the glut and OpenGL libraries:
@@ -969,17 +968,31 @@ void InitImGui() {
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImNodes::CreateContext();
+
   ImGuiIO &io = ImGui::GetIO();
   (void)io;
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;      // Enable Docking
   io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;    // Enable Multi-Viewport / Platform Windows
 
+  // Add .ini handle for UserData type
+  ImGuiSettingsHandler ini_handler;
+  ini_handler.TypeName = "UserData";
+  ini_handler.TypeHash = ImHashStr("UserData");
+  ini_handler.ReadOpenFn = MyUserData_ReadOpen;
+  ini_handler.ReadLineFn = MyUserData_ReadLine;
+  ini_handler.WriteAllFn = MyUserData_WriteAll;
+  ImGui::AddSettingsHandler(&ini_handler);
+
+  ImNodes::GetIO().LinkDetachWithModifierClick.Modifier = &ImGui::GetIO().KeyCtrl;
+  // ImNodes::GetIO().MultipleSelectModifier.Modifier = &ImGui::GetIO().KeyShift;
+  ImNodes::PushAttributeFlag(ImNodesAttributeFlags_EnableLinkDetachWithDragClick);
+
   // Setup Dear ImGui style
   ImGui::StyleColorsDark();
   // ImGui::StyleColorsLight();
-
-  NodeEditor::load();
+  ImNodes::StyleColorsDark();
+  // ImNodes::StyleColorsClassic();
 
   // Setup Platform/Renderer backends
   // FIXME: Consider reworking this example to install our own GLUT funcs + forward calls ImGui_ImplGLUT_XXX ones, instead of using ImGui_ImplGLUT_InstallFuncs().
@@ -1040,6 +1053,7 @@ void InitLists() {
 // MARK: Keyboard
 void Keyboard(unsigned char c, int x, int y) {
   printf("Keyboard: %d, %d, %d\n", c, x, y);
+
   if (!ImGuiSceneRenderHovered) {
     ImGui_ImplGLUT_KeyboardFunc(c, x, y);
 
@@ -1048,8 +1062,7 @@ void Keyboard(unsigned char c, int x, int y) {
       return;
   }
 
-  if (DebugOn != 0)
-    fprintf(stderr, "Keyboard: '%c' (0x%0x)\n", c, c);
+  printf("Allowed keyboard to happen\n");
 
   switch (c) {
     case '=':
@@ -1143,7 +1156,7 @@ void MouseButton(int button, int state, int x, int y) {
       return;
   }
 
-  printf("Allowed mouse to happen");
+  printf("Allowed mouse to happen\n");
 
   int b = 0;  // LEFT, MIDDLE, or RIGHT
 
@@ -1163,6 +1176,9 @@ void MouseButton(int button, int state, int x, int y) {
 
     case GLUT_RIGHT_BUTTON:
       b = RIGHT;
+
+      printf("Right button pressed\n");
+
       break;
 
     case SCROLL_WHEEL_UP:

@@ -3,45 +3,54 @@
 #include <iostream>
 
 #include "graph.h"
+#include "imnodes/imnodes.h"
+#include "nodes.h"
 #include "pairings.h"
 
 namespace NodeEditor {
 
-Graph Graph::graph;
+Graph Graph::graph = Graph();
 
-Graph::Graph() {}
-
-Graph::~Graph() {
-  for (Node* node : nodes) {
-    delete node;
-  }
+Graph::Graph() {
+  outputNode = std::make_shared<GroupOutputNode>();
+  addNode(outputNode);
 }
 
-int Graph::newId() {
+uint Graph::newId() {
   return currentId++;
 }
 
-void Graph::addNode(Node* node) {
+void Graph::addNode(std::shared_ptr<Node> node) {
   nodes.push_back(node);
   nodeIdToNode[node->id] = node;
   evaluationOrder.clear();
 }
 
-void Graph::removeNode(Node* node) {
-  // nodes.erase(std::remove(nodes.begin(), nodes.end(), node), nodes.end());
-  // nodeIdToNode.erase(node->id);
-  // delete node;
-  // TODO: implement
+void Graph::removeNode(uint nodeId) {
+  if (nodeId == outputNode->id) return;
+
+  auto node = nodeIdToNode.at(nodeId);
+
+  for (auto [toSocketId, fromSocketId] : backLinks) {
+    auto [nodeId, socketId, io] = reverse_pairing3(fromSocketId);
+    if (nodeId == node->id) {
+      disconnect(pairing(fromSocketId, toSocketId));
+    }
+  }
+
+  nodes.erase(std::remove(nodes.begin(), nodes.end(), node), nodes.end());
+  nodeIdToNode.erase(node->id);
   evaluationOrder.clear();
 }
 
-void Graph::addSocket(Socket* socket) {
+void Graph::addSocket(std::shared_ptr<Socket> socket) {
   socketIdToSocket[socket->id] = socket;
 }
 
-void Graph::connect(int fromSocketId, int toSocketId) {
+void Graph::connect(uint fromSocketId, uint toSocketId) {
   if (backLinks.count(toSocketId)) return;
-  // links.push_back({fromSocketId, toSocketId});
+  if (socketIdToSocket[fromSocketId]->type != socketIdToSocket[toSocketId]->type) return;
+
   backLinks[toSocketId] = fromSocketId;
   forwardLinks[fromSocketId].insert(toSocketId);
 
@@ -50,24 +59,33 @@ void Graph::connect(int fromSocketId, int toSocketId) {
   propagateDirty(nodeId);
 }
 
-void Graph::disconnect(int fromSocketId, int toSocketId) {
-  // auto [nodeId, SocketId, io] = reverse_pairing3(fromSocketId);
-  // TODO: implement
+void Graph::disconnect(uint linkId) {
+  auto [fromSocketId, toSocketId] = reverse_pairing(linkId);
+
+  backLinks.erase(toSocketId);
+  forwardLinks[fromSocketId].erase(toSocketId);
+  for (auto& [fromId, ids] : forwardLinks) {
+    ids.erase(toSocketId);
+  }
+
+  auto [nodeId, socketId, io] = reverse_pairing3(fromSocketId);
+  propagateDirty(nodeId);
+
   evaluationOrder.clear();
 }
 
-Node* Graph::getNode(int nodeId) {
+std::shared_ptr<Node> Graph::getNode(uint nodeId) {
   return nodeIdToNode.at(nodeId);
 }
 
-void Graph::propagateDirty(int nodeId) {
-  Node* node = getNode(nodeId);
+void Graph::propagateDirty(uint nodeId) {
+  std::shared_ptr<Node> node = getNode(nodeId);
   node->dirty = true;
-  for (int i = 0; i < node->outputs.size(); i++) {
-    if (forwardLinks.count(node->outputs[i].id) == 0) continue;
+  for (uint i = 0; i < node->outputCount; i++) {
+    if (forwardLinks.count(node->outputs[i]->id) == 0) continue;
 
-    auto inputSockets = forwardLinks[node->outputs[i].id];
-    for (int inputSocketId : inputSockets) {
+    auto inputSockets = forwardLinks[node->outputs[i]->id];
+    for (uint inputSocketId : inputSockets) {
       auto [nodeId, SocketIndex, io] = reverse_pairing3(inputSocketId);
       propagateDirty(nodeId);
     }
@@ -79,21 +97,21 @@ void Graph::evaluate() {
 
   if (evaluationOrder.size() == 0) {
     printf("Recalculating graph\n");
-    std::unordered_set<int> visited;
+    std::unordered_set<uint> visited;
     // std::vector<Node*> evaluationOrder;
 
-    std::function<bool(Node*)> dfs = [&](Node* node) -> bool {
+    std::function<bool(std::shared_ptr<Node>)> dfs = [&](std::shared_ptr<Node> node) -> bool {
       if (visited.count(node->id)) return false;
       visited.insert(node->id);
 
-      for (int i = 0; i < node->inputs.size(); i++) {
-        int inputId = pairing3(node->id, i, 0);
+      for (int i = 0; i < node->inputCount; i++) {
+        uint inputId = pairing3(node->id, i, 0);
         if (backLinks.count(inputId) == 0) continue;
 
-        int dependentOutputSocketId = backLinks[inputId];
+        uint dependentOutputSocketId = backLinks[inputId];
         // NodeId, SocketIndex, Input/Output
         auto [dependentNodeId, dependentSocketIndex, io] = reverse_pairing3(dependentOutputSocketId);
-        Node* dependentNode = nodes[dependentNodeId];
+        auto dependentNode = getNode(dependentNodeId);
         bool priorIsDirty = dfs(dependentNode);
         node->dirty = node->dirty || priorIsDirty;
       }
@@ -102,21 +120,24 @@ void Graph::evaluate() {
       return node->dirty;
     };
 
-    for (Node* node : nodes) {
+    for (auto& node : nodes) {
       dfs(node);
     }
   }
 
-  for (Node* node : evaluationOrder) {
+  for (auto& node : evaluationOrder) {
     node->evaluate();
   }
 }
 
 void Graph::render() {
-  for (Node* node : nodes) {
+  for (auto& node : nodes) {
     ImNodes::BeginNode(node->id);
     ImNodes::BeginNodeTitleBar();
+    ImGui::Text("%u", node->id);
+    ImGui::SameLine();
     ImGui::TextUnformatted(node->name.c_str());
+
     if (node->dirty) {
       ImGui::SameLine();
       ImGui::TextUnformatted("*");
@@ -133,31 +154,27 @@ void Graph::render() {
     if (node->dirty) node->markDirty();
   }
 
-  int i = 0;
   for (auto const& [inputSocketId, outputSocketId] : backLinks) {
-    ImNodes::Link(i, outputSocketId, inputSocketId);
-    i++;
+    ImNodes::Link(pairing(outputSocketId, inputSocketId), outputSocketId, inputSocketId);
   }
 }
 
 Node::~Node() {}
-Node::Node(std::string name) : id(Graph::graph.newId()), name(name) {
-  Graph::graph.addNode(this);
-  // inputs.fill(0);
-  // outputs.fill(0);
-}
+Node::Node(const std::string& name) : id(Graph::graph.newId()), displayWidth(NODE_WIDTH), name(name), dirty(true), lastEvaluationTime(0.0) {}
 
 void Node::addInput(const std::string& name, AttributeType type, const AttributeValue& defaultValue) {
-  int socketId = pairing3(id, inputCount, 0);
-  inputs[inputCount] = Socket{name, type, socketId, defaultValue};
-  Graph::graph.addSocket(&inputs[inputCount]);
+  uint socketId = pairing3(id, inputCount, 0);
+  auto socket = std::make_shared<Socket>(name, type, socketId, defaultValue);
+  inputs[inputCount] = socket;
+  Graph::graph.addSocket(socket);
   inputCount++;
 }
 
 void Node::addOutput(const std::string& name, AttributeType type, const AttributeValue& defaultValue) {
-  int socketId = pairing3(id, outputCount, 1);
-  outputs[outputCount] = Socket{name, type, socketId, defaultValue};
-  Graph::graph.addSocket(&outputs[outputCount]);
+  uint socketId = pairing3(id, outputCount, 1);
+  auto socket = std::make_shared<Socket>(name, type, socketId, defaultValue);
+  outputs[outputCount] = socket;
+  Graph::graph.addSocket(socket);
   outputCount++;
 }
 
@@ -182,66 +199,92 @@ void Node::evaluate() {
 void Node::renderSockets() {
   // Render Outputs
   for (size_t i = 0; i < outputCount; ++i) {
-    if (outputs[i].id == -1) continue;
-    ImNodes::BeginOutputAttribute(outputs[i].id);
-    ImGui::Text("%s", outputs[i].name.c_str());
+    const auto& output = outputs[i];
+    if (output->id == -1) continue;
+
+    ImNodes::BeginOutputAttribute(output->id);
+    ImGui::Text("%s", output->name.c_str());
     ImNodes::EndOutputAttribute();
   }
 
   // Render Inputs
   for (size_t i = 0; i < inputCount; ++i) {
-    if (inputs[i].id == -1) continue;
-    int inputSocketId = inputs[i].id;
+    const auto& input = inputs[i];
+    if (input->id == -1) continue;
+
+    uint inputSocketId = input->id;
     ImNodes::BeginInputAttribute(inputSocketId);
-    ImGui::Text("%s", inputs[i].name.c_str());
+    ImGui::Text("%s", input->name.c_str());
 
     // Render input widgets based on type
     ImGui::SameLine();
-    const float label_width = ImGui::CalcTextSize(inputs[i].name.c_str()).x;
+    const float label_width = ImGui::CalcTextSize(input->name.c_str()).x;
     ImGui::PushItemWidth(NODE_WIDTH - label_width);
 
     if (Graph::graph.backLinks.count(inputSocketId) == 0) {
-      switch (inputs[i].type) {
+      switch (input->type) {
         case AttributeType::Float: {
-          float value = std::get<float>(inputs[i].value);
-          if (ImGui::SliderFloat("##value", &value, 0.f, 1.f)) {
+          float& value = std::get<float>(input->value);
+
+          ImGui::PushItemWidth(NODE_WIDTH);
+          if (ImGui::DragFloat("##value1", &value, 0.01)) {
             dirty = true;
-            inputs[i].value = value;
           }
+
           break;
         }
         case AttributeType::Int: {
-          int value = std::get<int>(inputs[i].value);
-          if (ImGui::InputInt("##value", &value)) {
+          ImGui::Dummy(ImVec2(0, 0));
+
+          ImGui::PushItemWidth(NODE_WIDTH);
+
+          int value = std::get<int>(input->value);
+          if (ImGui::InputInt("##value1", &value)) {
             dirty = true;
-            inputs[i].value = value;
+            input->value = value;
           }
           break;
         }
         case AttributeType::String: {
-          std::string& value = std::get<std::string>(inputs[i].value);
+          std::string& value = std::get<std::string>(input->value);
           char buffer[256];  // A buffer for editing
           std::snprintf(buffer, sizeof(buffer), "%s", value.c_str());
-          if (ImGui::InputText("##value", buffer, sizeof(buffer))) {
+          if (ImGui::InputText("##value1", buffer, sizeof(buffer))) {
             value = buffer;
             dirty = true;
           }
           break;
         }
         case AttributeType::Vector: {
-          glm::vec3& vec = std::get<glm::vec3>(inputs[i].value);
+          ImGui::Dummy(ImVec2(0, 0));
+
+          glm::vec3& vec = std::get<glm::vec3>(input->value);
           float arr[3] = {vec.x, vec.y, vec.z};
-          if (ImGui::InputFloat3("##value", arr)) {
+
+          ImGui::PushItemWidth(NODE_WIDTH);
+          if (ImGui::DragFloat("##value1", arr, 0.01)) {
             vec.x = arr[0];
+            dirty = true;
+          }
+          ImGui::PushItemWidth(NODE_WIDTH);
+          if (ImGui::DragFloat("##value2", arr + 1, 0.01)) {
             vec.y = arr[1];
+            dirty = true;
+          }
+          ImGui::PushItemWidth(NODE_WIDTH);
+          if (ImGui::DragFloat("##value3", arr + 2, 0.01)) {
             vec.z = arr[2];
             dirty = true;
           }
+
           break;
         }
         case AttributeType::Color: {
-          auto& color = std::get<glm::vec3>(inputs[i].value);
+          auto& color = std::get<glm::vec3>(input->value);
           dirty |= ImGui::ColorEdit3("##value", &color.x);
+          break;
+        }
+        case AttributeType::Mesh: {
           break;
         }
         default:
@@ -251,24 +294,6 @@ void Node::renderSockets() {
     }
     ImNodes::EndInputAttribute();
   }
-}
-
-void printSocketValue(const NodeEditor::Socket& socket) {
-  std::visit([](auto&& arg) {
-    using T = std::decay_t<decltype(arg)>;
-    if constexpr (std::is_same_v<T, float>) {
-      std::cout << "Float value: " << arg << std::endl;
-    } else if constexpr (std::is_same_v<T, int>) {
-      std::cout << "Int value: " << arg << std::endl;
-    } else if constexpr (std::is_same_v<T, std::string>) {
-      std::cout << "String value: " << arg << std::endl;
-      // } else if constexpr (std::is_same_v<T, glm::vec3>) {
-      //   std::cout << "Vector value: (" << arg.x << ", " << arg.y << ", " << arg.z << ")" << std::endl;
-    } else {
-      std::cout << "Unknown or uninitialized value." << std::endl;
-    }
-  },
-             socket.value);
 }
 
 }  // namespace NodeEditor

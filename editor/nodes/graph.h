@@ -1,5 +1,10 @@
 #pragma once
 
+#include <cereal/types/memory.hpp>
+#include <cereal/types/unordered_map.hpp>
+#include <cereal/types/unordered_set.hpp>
+#include <cereal/types/vector.hpp>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -7,7 +12,6 @@
 #include <vector>
 
 #include "../../imnodes/imnodes.h"
-#include "cereal/archives/json.hpp"  // or binary, XML, etc.
 #include "cereal/types/array.hpp"
 #include "cereal/types/string.hpp"
 #include "cereal/types/unordered_map.hpp"
@@ -27,23 +31,22 @@ void serialize(Archive& archive, vec3& v) {
 namespace NodeEditor {
 
 struct Link {
-  int fromSocketId;
-  int toSocketId;
+  uint fromSocketId;
+  uint toSocketId;
 
   template <class Archive>
-  void serialize(Archive& archive, Link& link) {
-    archive(link.fromSocketId, link.toSocketId);
+  void serialize(Archive& archive) {
+    archive(fromSocketId, toSocketId);
   }
 };
 
 class Graph;
 
-#define NODE_WIDTH 100
-#define MAX_INPUTS 10
-#define MAX_OUTPUTS 10
+#define NODE_WIDTH 150
+#define MAX_SOCKETS 10
 
 enum class AttributeType {
-  TriangleMesh,
+  Mesh,
   Curve,
   Color,
   Vector,  // glm::vec3
@@ -54,9 +57,24 @@ enum class AttributeType {
   Bool,
 };
 
+struct Vertex {
+  glm::vec3 position;
+  glm::vec3 normal;
+  glm::vec3 color;
+
+  Vertex() : position(glm::vec3(0.f)), normal(glm::vec3(0.f)), color(glm::vec3(0.f)) {}
+  Vertex(glm::vec3 position, glm::vec3 normal, glm::vec3 color) : position(position), normal(normal), color(color) {}
+
+  template <class Archive>
+  void serialize(Archive& archive) {
+    archive(position, color, normal);
+  }
+};
+
 using AttributeValue = std::variant<
     std::monostate,          // Represents an uninitialized state
-    std::vector<glm::vec3>,  // VertexMesh or Curve can use std::vector<float> for simplicity
+    std::vector<glm::vec3>,  // Mesh or Curve can use std::vector<float> for simplicity
+    std::vector<Vertex>,     // Mesh
     glm::vec3,               // For vectors
     // glm::quat,           // For rotations
     float,
@@ -67,29 +85,44 @@ using AttributeValue = std::variant<
 struct Socket {
   std::string name;
   AttributeType type;
-  int id;
+  uint id;
   AttributeValue value;
+
+  Socket(const std::string& name, AttributeType type, uint id, const AttributeValue& value)
+      : name(name), type(type), id(id), value(value) {}
 
   template <class Archive>
   void serialize(Archive& archive) {
     archive(name, type, id, value);
   }
+
+  template <class Archive>
+  static void load_and_construct(Archive& ar, cereal::construct<Socket>& construct) {
+    std::string name;
+    AttributeType type;
+    uint id;
+    AttributeValue value;
+
+    ar(name, type, id, value);
+    construct(name, type, id, value);
+  }
 };
 
-class Node {
+class Node : public std::enable_shared_from_this<Node> {
  public:
-  int id;
+  uint id;
 
+  float displayWidth = 0.f;
   std::string name;
   int inputCount = 0;
   int outputCount = 0;
-  std::array<Socket, MAX_INPUTS> inputs;
-  std::array<Socket, MAX_OUTPUTS> outputs;
+  std::array<std::shared_ptr<Socket>, MAX_SOCKETS> inputs;
+  std::array<std::shared_ptr<Socket>, MAX_SOCKETS> outputs;
 
   bool dirty = true;
   double lastEvaluationTime = 0.0;
 
-  Node(std::string name);
+  explicit Node(const std::string& name);
   virtual ~Node();
 
   void addInput(const std::string& name, AttributeType type, const AttributeValue& defaultValue = {});
@@ -110,45 +143,47 @@ class Node {
   void renderSockets();
 };
 
+class GroupOutputNode;
 class Graph {
  public:
   static Graph graph;
 
-  int currentId;
+  uint currentId = 0;
   // All nodes
-  std::vector<Node*> nodes;
+  std::vector<std::shared_ptr<Node>> nodes;
   // Map from node ID to node
-  std::unordered_map<int, Node*> nodeIdToNode;
+  std::unordered_map<uint, std::shared_ptr<Node>> nodeIdToNode;
   // Map from Socket ID to Socket object
-  std::unordered_map<int, Socket*> socketIdToSocket;
+  std::unordered_map<uint, std::shared_ptr<Socket>> socketIdToSocket;
   // Map from input Socket ID to output Socket ID
-  std::unordered_map<int, int> backLinks;
+  std::unordered_map<uint, uint> backLinks;
   // Map from output Socket ID to input Socket IDs
-  std::unordered_map<int, std::unordered_set<int>> forwardLinks;
+  std::unordered_map<uint, std::unordered_set<uint>> forwardLinks;
 
-  std::vector<Node*> evaluationOrder;
+  std::vector<std::shared_ptr<Node>> evaluationOrder;
+
+  std::shared_ptr<GroupOutputNode> outputNode;
 
   Graph();
-  ~Graph();
+  ~Graph() = default;  // Shared pointers handle memory automatically
 
-  int newId();
-  void addNode(Node* node);
-  void removeNode(Node* node);
-  void addSocket(Socket* socket);
-  void connect(int fromSocketId, int toSocketId);
-  void disconnect(int fromSocketId, int toSocketId);
+  uint newId();
+  void addNode(std::shared_ptr<Node> node);
+  void removeNode(uint nodeId);
+  void addSocket(std::shared_ptr<Socket> socket);
+  void connect(uint fromSocketId, uint toSocketId);
+  void disconnect(uint linkId);
 
-  void propagateDirty(int nodeId);
-  Node* getNode(int nodeId);
-  int size() { return nodes.size(); }
+  void propagateDirty(uint nodeId);
+  std::shared_ptr<Node> getNode(uint nodeId);
+  size_t size() const { return nodes.size(); }
 
   void evaluate();
-
   void render();
 
   template <class Archive>
   void serialize(Archive& archive) {
-    archive(currentId, backLinks, forwardLinks);
+    archive(nodes, nodeIdToNode, socketIdToSocket, backLinks, forwardLinks, currentId);
   }
 };
 

@@ -246,13 +246,13 @@ struct ImNodesEditorContext {
   // Mini-map state set by MiniMap()
 
   bool MiniMapEnabled;
+  bool MiniMapNeedsCentering;
   ImNodesMiniMapLocation MiniMapLocation;
   float MiniMapSizeFraction;
   ImNodesMiniMapNodeHoveringCallback MiniMapNodeHoveringCallback;
   ImNodesMiniMapNodeHoveringCallbackUserData MiniMapNodeHoveringCallbackUserData;
 
   // Mini-map state set during EndNodeEditor() call
-
   ImRect MiniMapRectScreenSpace;
   ImRect MiniMapContentScreenSpace;
   float MiniMapScaling;

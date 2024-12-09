@@ -1,14 +1,10 @@
-#include "cereal/archives/json.hpp"
+#pragma once
+
 #include "cereal/types/base_class.hpp"
 #include "cereal/types/polymorphic.hpp"
 #include "graph.h"
 
 namespace NodeEditor {
-
-#define IN(t, i) (graph->backLinks.count(inputs[i].attributeId) == 0 ? std::get<t>(inputs[i].value) : std::get<t>(graph->socketIdToSocket[inputs[i].attributeId]->value))
-#define OUT(i) outputs[i].value
-
-// extern std::unordered_map<std::string, std::function<Node*()>> menuItemToNodeCreator;
 
 class GroupInputNode : public Node {
  public:
@@ -27,6 +23,8 @@ class GroupOutputNode : public Node {
   GroupOutputNode();
   void display() override;
   void evaluateInternal() override;
+
+  const std::shared_ptr<Socket> getOutput();
 
   template <class Archive>
   void serialize(Archive& archive) {
@@ -72,24 +70,10 @@ class PrintNode : public Node {
   }
 };
 
-class PrimitveCubeNode : public Node {
- public:
-  PrimitveCubeNode();
-  void display() override;
-  void evaluateInternal() override;
-
-  glm::vec3 size;
-  int subdivisions;
-
-  template <class Archive>
-  void serialize(Archive& archive) {
-    archive(cereal::base_class<Node>(this));
-  }
-};
-
 }  // namespace NodeEditor
 
 CEREAL_REGISTER_TYPE(NodeEditor::AddNode)
 CEREAL_REGISTER_TYPE(NodeEditor::ValueNode)
 CEREAL_REGISTER_TYPE(NodeEditor::PrintNode)
-CEREAL_REGISTER_TYPE(NodeEditor::PrimitveCubeNode)
+CEREAL_REGISTER_TYPE(NodeEditor::GroupInputNode)
+CEREAL_REGISTER_TYPE(NodeEditor::GroupOutputNode)

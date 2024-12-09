@@ -1699,6 +1699,11 @@ static void MiniMapUpdate() {
     ImVec2 center = GImNodes->CanvasRectScreenSpace.GetSize() * 0.5f;
     editor.Panning = ImFloor(center - target);
   }
+  if (editor.MiniMapNeedsCentering) {
+    editor.MiniMapNeedsCentering = false;
+    ImVec2 center = GImNodes->CanvasRectScreenSpace.GetSize() * 0.5f;
+    editor.Panning = ImFloor(center);
+  }
 
   // Reset callback info after use
   editor.MiniMapNodeHoveringCallback = NULL;
@@ -2444,6 +2449,11 @@ void SetNodeDraggable(const int node_id, const bool draggable) {
   ImNodesEditorContext& editor = EditorContextGet();
   ImNodeData& node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
   node.Draggable = draggable;
+}
+
+void SetMiniMapNeedsCentering() {
+  ImNodesEditorContext& editor = EditorContextGet();
+  editor.MiniMapNeedsCentering = true;
 }
 
 ImVec2 GetNodeScreenSpacePos(const int node_id) {

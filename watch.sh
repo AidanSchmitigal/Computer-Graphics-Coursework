@@ -10,7 +10,7 @@ echo $SAMPLE_PID_T
 
 while true; do
 
-  fswatch ./* -e "sample.runme" -e "build" -e "imgui.ini"  -e "save_load.ini" -e "save_load.bytes" -e "watch.sh" -1
+  fswatch ./* -e "sample.runme" -e "build" -e "imgui.ini" -e "imnodes.ini" -e "watch.sh" -e "graph.bin" -1
 
   echo "Change detected. Restarting make..."
 

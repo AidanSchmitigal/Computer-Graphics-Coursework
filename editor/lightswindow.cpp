@@ -14,6 +14,8 @@
 #include "glew.h"
 #endif
 
+namespace LightsEditor {
+
 // Define a struct for lights
 struct Light {
   float position[3] = {0.0f, 0.0f, 0.0f};
@@ -25,13 +27,26 @@ struct Light {
   int type = 0;  // 0 = Point, 1 = Directional, 2 = Spotlight
 };
 
-// Light collection
 std::vector<Light> lights;
 float ambientLight[4] = {0.3f, 0.3f, 0.3f, 1.f};
+float clearColor[4] = {0.45f, 0.55f, 0.60f, 1.00f};
 
-// Dear ImGui panel for configuring lights
 void ShowLightsPanel() {
   ImGui::Begin("Lights Panel");
+
+  ImGui::ColorEdit3("Clear Color", clearColor);
+  ImGui::ColorEdit3("Ambient Light Color", ambientLight);
+
+  if (ImGui::Button("Add Light")) {
+    if (lights.size() < 8) {
+      lights.push_back(Light());
+    }
+  }
+
+  ImGui::SameLine();
+  if (ImGui::Button("Clear Lights")) {
+    lights.clear();
+  }
 
   for (size_t i = 0; i < lights.size(); ++i) {
     ImGui::PushID(static_cast<int>(i));  // Ensure unique ID for each light
@@ -64,21 +79,6 @@ void ShowLightsPanel() {
 
     ImGui::PopID();
   }
-
-  // Add new light button
-  if (ImGui::Button("Add Light")) {
-    if (lights.size() < 8) {
-      lights.push_back(Light());
-    }
-  }
-
-  // Clear all lights button
-  if (ImGui::Button("Clear Lights")) {
-    lights.clear();
-  }
-
-  // Ambient light color
-  ImGui::ColorEdit3("Ambient Light Color", ambientLight);
 
   ImGui::End();
 }
@@ -133,3 +133,5 @@ void DisplayLights() {
 
   glDisable(GL_LIGHTING);
 }
+
+}  // namespace LightsEditor

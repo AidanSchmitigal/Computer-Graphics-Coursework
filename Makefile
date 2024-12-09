@@ -52,4 +52,7 @@ $(EXE): $(OBJS)
 	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)
 
 clean:
+	rm -f $(EXE) $(OBJS)/editor
+
+cleanall:
 	rm -f $(EXE) $(OBJS)
