@@ -7,9 +7,10 @@ namespace Debug {
 bool flatShading = true;
 bool showWireframe = false;
 bool showNormals = false;
-bool autoRotate = true;
+bool autoRotate = false;
 bool showDemoWindow = false;
 bool lightingEnabled = true;
+bool freezeTime = false;
 
 void ShowDebugPanel() {
   ImGui::Begin("Debug");
@@ -20,6 +21,7 @@ void ShowDebugPanel() {
   ImGui::Checkbox("Auto Rotate", &autoRotate);
   ImGui::Checkbox("Show Demo Window", &showDemoWindow);
   ImGui::Checkbox("Lighting Enabled", &lightingEnabled);
+  ImGui::Checkbox("Freeze Time", &freezeTime);
 
   ImGui::End();
 }

@@ -3,6 +3,7 @@
 #include <variant>
 #include <vector>
 
+#include "glm/common.hpp"
 #include "graph.h"
 #include "imgui_stdlib.h"
 
@@ -29,88 +30,86 @@ void PrimitiveCubeNode::evaluateInternal() {
 
   vertices.clear();
 
-  // Verticies
-  Vertex v1, v2, v3, v4, v5, v6, v7, v8;
+  // Ensure subdivisions are at least 1
+  subdivisions = std::max(1, subdivisions);
 
-  // Bottom
-  v1.position = glm::vec3(-0.5f * size.x, -0.5f * size.y, 0.5f * size.z);
-  v2.position = glm::vec3(0.5f * size.x, -0.5f * size.y, 0.5f * size.z);
-  v3.position = glm::vec3(0.5f * size.x, -0.5f * size.y, -0.5f * size.z);
-  v4.position = glm::vec3(-0.5f * size.x, -0.5f * size.y, -0.5f * size.z);
+  auto createFace = [&](const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3, const glm::vec3& p4, const glm::vec3& normal) {
+    float stepX = 1.0f / subdivisions;
+    float stepY = 1.0f / subdivisions;
 
-  // Top
-  v5.position = glm::vec3(-0.5f * size.x, 0.5f * size.y, 0.5f * size.z);
-  v6.position = glm::vec3(0.5f * size.x, 0.5f * size.y, 0.5f * size.z);
-  v7.position = glm::vec3(0.5f * size.x, 0.5f * size.y, -0.5f * size.z);
-  v8.position = glm::vec3(-0.5f * size.x, 0.5f * size.y, -0.5f * size.z);
+    for (int i = 0; i < subdivisions; ++i) {
+      for (int j = 0; j < subdivisions; ++j) {
+        glm::vec3 p11 = glm::mix(p1, p2, i * stepX);
+        glm::vec3 p12 = glm::mix(p1, p2, (i + 1) * stepX);
+        glm::vec3 p21 = glm::mix(p3, p4, i * stepX);
+        glm::vec3 p22 = glm::mix(p3, p4, (i + 1) * stepX);
 
-  /*
+        glm::vec3 v1 = glm::mix(p11, p21, j * stepY);
+        glm::vec3 v2 = glm::mix(p11, p21, (j + 1) * stepY);
+        glm::vec3 v3 = glm::mix(p12, p22, j * stepY);
+        glm::vec3 v4 = glm::mix(p12, p22, (j + 1) * stepY);
 
-      v8 * ---------- * v7
-         |\           |\
-         | \          | \
-   y  v5 |  *------------* v6
-   |_x   |  |         |  |
-  z/     |  |         |  |
-      v4 *--|---------*  | v3
-          \ |          \ |
-           \|           \|
-         v1 *------------* v2
-  */
+        // Add two triangles for the quad
+        vertices.push_back({v1, normal, glm::vec3(0.0f)});
+        vertices.push_back({v3, normal, glm::vec3(0.0f)});
+        vertices.push_back({v2, normal, glm::vec3(0.0f)});
 
-#define vert(v, x, y, z) \
-  vertices.push_back(v); \
-  vertices.back().normal = glm::vec3(x, y, z);
+        vertices.push_back({v2, normal, glm::vec3(0.0f)});
+        vertices.push_back({v3, normal, glm::vec3(0.0f)});
+        vertices.push_back({v4, normal, glm::vec3(0.0f)});
+      }
+    }
+  };
 
-  // Bottom
-  vert(v1, 0, -1, 0);
-  vert(v4, 0, -1, 0);
-  vert(v3, 0, -1, 0);
-  vert(v1, 0, -1, 0);
-  vert(v3, 0, -1, 0);
-  vert(v2, 0, -1, 0);
+  glm::vec3 halfSize = size * 0.5f;
 
-  // Top
-  vert(v5, 0, 1, 0);
-  vert(v7, 0, 1, 0);
-  vert(v6, 0, 1, 0);
-  vert(v5, 0, 1, 0);
-  vert(v8, 0, 1, 0);
-  vert(v7, 0, 1, 0);
+  // Bottom face (-Y)
+  createFace(
+      {-halfSize.x, -halfSize.y, halfSize.z},
+      {halfSize.x, -halfSize.y, halfSize.z},
+      {-halfSize.x, -halfSize.y, -halfSize.z},
+      {halfSize.x, -halfSize.y, -halfSize.z},
+      {0.0f, -1.0f, 0.0f});
 
-  // +x
-  vert(v2, 1, 0, 0);
-  vert(v3, 1, 0, 0);
-  vert(v7, 1, 0, 0);
-  vert(v2, 1, 0, 0);
-  vert(v7, 1, 0, 0);
-  vert(v6, 1, 0, 0);
+  // Top face (+Y)
+  createFace(
+      {-halfSize.x, halfSize.y, halfSize.z},
+      {halfSize.x, halfSize.y, halfSize.z},
+      {-halfSize.x, halfSize.y, -halfSize.z},
+      {halfSize.x, halfSize.y, -halfSize.z},
+      {0.0f, 1.0f, 0.0f});
 
-  // -x
-  vert(v4, -1, 0, 0);
-  vert(v1, -1, 0, 0);
-  vert(v5, -1, 0, 0);
-  vert(v4, -1, 0, 0);
-  vert(v5, -1, 0, 0);
-  vert(v8, -1, 0, 0);
+  // Front face (+Z)
+  createFace(
+      {-halfSize.x, -halfSize.y, halfSize.z},
+      {halfSize.x, -halfSize.y, halfSize.z},
+      {-halfSize.x, halfSize.y, halfSize.z},
+      {halfSize.x, halfSize.y, halfSize.z},
+      {0.0f, 0.0f, 1.0f});
 
-  // +z
-  vert(v1, 0, 0, 1);
-  vert(v2, 0, 0, 1);
-  vert(v6, 0, 0, 1);
-  vert(v1, 0, 0, 1);
-  vert(v6, 0, 0, 1);
-  vert(v5, 0, 0, 1);
+  // Back face (-Z)
+  createFace(
+      {halfSize.x, -halfSize.y, -halfSize.z},
+      {-halfSize.x, -halfSize.y, -halfSize.z},
+      {halfSize.x, halfSize.y, -halfSize.z},
+      {-halfSize.x, halfSize.y, -halfSize.z},
+      {0.0f, 0.0f, -1.0f});
 
-  // -z
-  vert(v3, 0, 0, -1);
-  vert(v4, 0, 0, -1);
-  vert(v8, 0, 0, -1);
-  vert(v3, 0, 0, -1);
-  vert(v8, 0, 0, -1);
-  vert(v7, 0, 0, -1);
+  // Right face (+X)
+  createFace(
+      {halfSize.x, -halfSize.y, halfSize.z},
+      {halfSize.x, -halfSize.y, -halfSize.z},
+      {halfSize.x, halfSize.y, halfSize.z},
+      {halfSize.x, halfSize.y, -halfSize.z},
+      {1.0f, 0.0f, 0.0f});
 
-#undef setNorm
+  // Left face (-X)
+  createFace(
+      {-halfSize.x, -halfSize.y, -halfSize.z},
+      {-halfSize.x, -halfSize.y, halfSize.z},
+      {-halfSize.x, halfSize.y, -halfSize.z},
+      {-halfSize.x, halfSize.y, halfSize.z},
+      {-1.0f, 0.0f, 0.0f});
 }
 
 PrimitiveSphereNode::PrimitiveSphereNode() : Node("Primitive Sphere") {
@@ -347,8 +346,6 @@ void PrimitiveCylinderNode::evaluateInternal() {
     }
   }
 
-  printf("Vertex count: %d\n", vertices.size());
-
   // draw the bottom circle:
   if (radBot != 0.) {
     for (int ilng = numLngs - 1; ilng >= 0; ilng--) {
@@ -464,5 +461,8 @@ void PrimitiveCircleNode::evaluateInternal() {
     vertices.push_back(Vertex(glm::vec3(x2, 0.0f, y2), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f)));
   }
 }
+
+#undef IN
+#undef OUT
 
 }  // namespace NodeEditor

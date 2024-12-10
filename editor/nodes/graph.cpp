@@ -10,6 +10,7 @@
 namespace NodeEditor {
 
 Graph Graph::graph = Graph();
+Globals Graph::globals = {0.f, 0.f};
 
 Graph::Graph() {
   outputNode = std::make_shared<GroupOutputNode>();
@@ -32,8 +33,7 @@ void Graph::removeNode(uint nodeId) {
   auto node = nodeIdToNode.at(nodeId);
 
   for (auto [toSocketId, fromSocketId] : backLinks) {
-    auto [nodeId, socketId, io] = reverse_pairing3(fromSocketId);
-    if (nodeId == node->id) {
+    if (std::get<0>(reverse_pairing3(fromSocketId)) == node->id || std::get<0>(reverse_pairing3(toSocketId)) == node->id) {
       disconnect(pairing(fromSocketId, toSocketId));
     }
   }
@@ -48,8 +48,11 @@ void Graph::addSocket(std::shared_ptr<Socket> socket) {
 }
 
 void Graph::connect(uint fromSocketId, uint toSocketId) {
-  if (backLinks.count(toSocketId)) return;
   if (socketIdToSocket[fromSocketId]->type != socketIdToSocket[toSocketId]->type) return;
+
+  if (backLinks.count(toSocketId)) {
+    disconnect(pairing(fromSocketId, toSocketId));
+  }
 
   backLinks[toSocketId] = fromSocketId;
   forwardLinks[fromSocketId].insert(toSocketId);
@@ -221,13 +224,15 @@ void Node::renderSockets() {
     const float label_width = ImGui::CalcTextSize(input->name.c_str()).x;
     ImGui::PushItemWidth(NODE_WIDTH - label_width);
 
+    float dragSpeed = 0.01f * ImGui::IsKeyDown(ImGuiMod_Shift) ? 10.f : 1.f;
+
     if (Graph::graph.backLinks.count(inputSocketId) == 0) {
       switch (input->type) {
         case AttributeType::Float: {
           float& value = std::get<float>(input->value);
 
           ImGui::PushItemWidth(NODE_WIDTH);
-          if (ImGui::DragFloat("##value1", &value, 0.01)) {
+          if (ImGui::DragFloat("##value1", &value, dragSpeed)) {
             dirty = true;
           }
 
@@ -262,17 +267,17 @@ void Node::renderSockets() {
           float arr[3] = {vec.x, vec.y, vec.z};
 
           ImGui::PushItemWidth(NODE_WIDTH);
-          if (ImGui::DragFloat("##value1", arr, 0.01)) {
+          if (ImGui::DragFloat("##value1", arr, dragSpeed)) {
             vec.x = arr[0];
             dirty = true;
           }
           ImGui::PushItemWidth(NODE_WIDTH);
-          if (ImGui::DragFloat("##value2", arr + 1, 0.01)) {
+          if (ImGui::DragFloat("##value2", arr + 1, dragSpeed)) {
             vec.y = arr[1];
             dirty = true;
           }
           ImGui::PushItemWidth(NODE_WIDTH);
-          if (ImGui::DragFloat("##value3", arr + 2, 0.01)) {
+          if (ImGui::DragFloat("##value3", arr + 2, dragSpeed)) {
             vec.z = arr[2];
             dirty = true;
           }

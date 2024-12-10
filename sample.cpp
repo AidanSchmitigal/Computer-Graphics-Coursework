@@ -16,7 +16,6 @@
 #include "imgui.h"
 #include "imgui_impl_glut.h"
 #include "imgui_impl_opengl2.h"
-#include "imgui_internal.h"
 #include "imnodes/imnodes.h"
 
 #ifdef __APPLE__
@@ -193,7 +192,6 @@ void DoStrokeString(float, float, float, float, char *);
 float ElapsedSeconds();
 void InitGraphics();
 void InitImGui();
-void InitAnimations();
 void InitLists();
 void InitMenus();
 void Keyboard(unsigned char, int, int);
@@ -205,7 +203,6 @@ void MouseMotion(int, int);
 void MouseMotionPassive(int, int);
 void Reset();
 void ExitProgram();
-void ExitEffects();
 void Resize(int, int);
 void Visibility(int);
 
@@ -221,6 +218,7 @@ void Axes(float);
 // #include "glslprogram.cpp"
 #include "editor/lightswindow.h"
 #include "editor/nodeeditor.h"
+#include "editor/style.h"
 #include "objects/heli.550"
 #include "objects/objects.h"
 // #include "objects/osucone.cpp"
@@ -263,8 +261,6 @@ int main(int argc, char *argv[]) {
 
   InitLists();
 
-  InitAnimations();
-
   // init all the global variables used by Display( ):
   // this will also post a redisplay
 
@@ -274,14 +270,12 @@ int main(int argc, char *argv[]) {
 
   InitMenus();
 
-  atexit(ExitEffects);
-
   glutSetWindow(MainWindow);
   glutMainLoop();
   return 0;
 }
 
-void ExitEffects() {
+void ExitProgram() {
   printf("Exiting\n");
 
   NodeEditor::save();
@@ -297,10 +291,7 @@ void ExitEffects() {
   ImNodes::DestroyContext();
 
   printf("Exitted\n");
-}
 
-void ExitProgram() {
-  ExitEffects();
   exit(0);
 }
 
@@ -317,13 +308,16 @@ void Animate() {
   // put animation stuff in here -- change some global variables for Display( ) to find:
 
   ms = glutGet(GLUT_ELAPSED_TIME);
-  if (FreezeAnimation == 0) {
-    delta_time = (ms - scene_ms) / 1000.f;
-    scene_ms = ms;
+  delta_time = (ms - scene_ms) / 1000.f;
+  if (Debug::freezeTime == false) {
+    scene_ms += delta_time;
 
     if (Debug::autoRotate) {
       Yrot += 2 * delta_time;
     }
+
+    NodeEditor::Graph::globals.sceneTime = scene_ms;
+    NodeEditor::Graph::globals.deltaTime = delta_time;
   }
 
   // for example, if you wanted to spin an object in Display( ), you might call: glRotatef( 360.f*Time,   0., 1., 0. );
@@ -609,6 +603,7 @@ void Display() {
   for (NodeEditor::Vertex vertex : vertices) {
     glNormal3f(vertex.normal.x, vertex.normal.y, vertex.normal.z);
     glColor3f(vertex.color.r, vertex.color.g, vertex.color.b);
+    SetMaterial(vertex.color.r, vertex.color.g, vertex.color.b, 1.0f);
     glVertex3f(vertex.position.x, vertex.position.y, vertex.position.z);
   }
 
@@ -975,23 +970,17 @@ void InitImGui() {
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;      // Enable Docking
   io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;    // Enable Multi-Viewport / Platform Windows
 
-  // Add .ini handle for UserData type
-  ImGuiSettingsHandler ini_handler;
-  ini_handler.TypeName = "UserData";
-  ini_handler.TypeHash = ImHashStr("UserData");
-  ini_handler.ReadOpenFn = MyUserData_ReadOpen;
-  ini_handler.ReadLineFn = MyUserData_ReadLine;
-  ini_handler.WriteAllFn = MyUserData_WriteAll;
-  ImGui::AddSettingsHandler(&ini_handler);
-
   ImNodes::GetIO().LinkDetachWithModifierClick.Modifier = &ImGui::GetIO().KeyCtrl;
   // ImNodes::GetIO().MultipleSelectModifier.Modifier = &ImGui::GetIO().KeyShift;
-  ImNodes::PushAttributeFlag(ImNodesAttributeFlags_EnableLinkDetachWithDragClick);
+  // ImNodes::PushAttributeFlag(ImNodesAttributeFlags_EnableLinkDetachWithDragClick);
 
   // Setup Dear ImGui style
-  ImGui::StyleColorsDark();
+  // StyleColorsSleek();
+  // StyleColorsMarch();
+  StyleColorsMaterial();
+  // ImGui::StyleColorsDark();
   // ImGui::StyleColorsLight();
-  ImNodes::StyleColorsDark();
+  // ImNodes::StyleColorsDark();
   // ImNodes::StyleColorsClassic();
 
   // Setup Platform/Renderer backends
@@ -1021,10 +1010,6 @@ void InitImGui() {
   // io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
   // ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
   // IM_ASSERT(font != nullptr);
-}
-
-// MARK: InitAnimations
-void InitAnimations() {
 }
 
 // initialize the display lists that will not change:

@@ -17,10 +17,15 @@
 #include "imgui.h"
 #include "imgui_impl_glut.h"
 #include "imgui_impl_opengl2.h"
+#include "imgui_stdlib.h"
 #include "imnodes/imnodes.h"
+#include "nodes/coloring.h"
+#include "nodes/geometry.h"
 #include "nodes/graph.h"
+#include "nodes/math.h"
 #include "nodes/nodes.h"
 #include "nodes/primitives.h"
+#include "nodes/transforms.h"
 #include "nodes/vectors.h"
 
 namespace NodeEditor {
@@ -56,46 +61,143 @@ std::unordered_map<std::string, std::function<std::shared_ptr<Node>()>> vectorMe
     {"Vector Normalize", []() { return std::make_shared<VectorNormalizeNode>(); }},
 };
 
+std::unordered_map<std::string, std::function<std::shared_ptr<Node>()>> transformMenu = {
+    {"Translate", []() { return std::make_shared<TranslateNode>(); }},
+    {"Rotate", []() { return std::make_shared<RotateNode>(); }},
+    {"Scale", []() { return std::make_shared<ScaleNode>(); }},
+};
+
+std::unordered_map<std::string, std::function<std::shared_ptr<Node>()>> mathMenu = {
+    {"Add", []() { return std::make_shared<AddNode>(); }},
+    {"Subtract", []() { return std::make_shared<SubtractNode>(); }},
+    {"Multiply", []() { return std::make_shared<MultiplyNode>(); }},
+    {"Divide", []() { return std::make_shared<DivideNode>(); }},
+    {"Power", []() { return std::make_shared<PowerNode>(); }},
+    {"Modulo", []() { return std::make_shared<ModuloNode>(); }},
+    {"Absolute", []() { return std::make_shared<AbsoluteNode>(); }},
+    {"Floor", []() { return std::make_shared<FloorNode>(); }},
+    {"Ceil", []() { return std::make_shared<CeilNode>(); }},
+    {"Round", []() { return std::make_shared<RoundNode>(); }},
+    {"Sqrt", []() { return std::make_shared<SqrtNode>(); }},
+    {"Sin", []() { return std::make_shared<SinNode>(); }},
+    {"Cos", []() { return std::make_shared<CosNode>(); }},
+    {"Tan", []() { return std::make_shared<TanNode>(); }},
+    {"Arcsin", []() { return std::make_shared<ArcsinNode>(); }},
+    {"Arccos", []() { return std::make_shared<ArccosNode>(); }},
+    {"Arctan", []() { return std::make_shared<ArctanNode>(); }},
+    {"Arctan2", []() { return std::make_shared<Arctan2Node>(); }},
+    {"Log", []() { return std::make_shared<LogNode>(); }},
+    {"Exp", []() { return std::make_shared<ExpNode>(); }},
+};
+
+std::unordered_map<std::string, std::function<std::shared_ptr<Node>()>> geometryMenu = {
+    {"Merge", []() { return std::make_shared<MergeGeometryNode>(); }},
+    {"Instance", []() { return std::make_shared<InstanceOnPointsNode>(); }},
+};
+
+std::unordered_map<std::string, std::function<std::shared_ptr<Node>()>> coloringMenu = {
+    {"Set Color", []() { return std::make_shared<SetColorNode>(); }},
+};
+
 std::unordered_map<std::string, std::unordered_map<std::string, std::function<std::shared_ptr<Node>()>>> menuItemToNodeCreator = {
     {"Groups", groupMenu},
     {"Primitives", primitivesMenu},
     {"Vectors", vectorMenu},
+    {"Transforms", transformMenu},
+    {"Math", mathMenu},
+    {"Geometry", geometryMenu},
+    {"Coloring", coloringMenu},
 };
 
 bool center = true;
+std::string search = "";
+
+#include <algorithm>
+#include <cctype>
+#include <string>
+
+/// Try to find in the Haystack the Needle - ignore case
+bool findStringIC(const std::string& strHaystack, const std::string& strNeedle) {
+  auto it = std::search(
+      strHaystack.begin(), strHaystack.end(),
+      strNeedle.begin(), strNeedle.end(),
+      [](unsigned char ch1, unsigned char ch2) { return std::toupper(ch1) == std::toupper(ch2); });
+  return (it != strHaystack.end());
+}
+
+void showAddNodeMenu() {
+  const bool should_open_popup = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+                                 ImNodes::IsEditorHovered() &&
+                                 ((ImGui::IsKeyDown(ImGuiKey_A) && ImGui::IsKeyDown(ImGuiMod_Shift)) ||
+                                  ImGui::IsMouseDown(ImGuiMouseButton_Right));
+
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.f, 8.f));
+
+  if (!ImGui::IsAnyItemHovered() && should_open_popup) {
+    ImGui::OpenPopup("add node");
+  }
+
+  if (!ImGui::BeginPopup("add node")) {
+    ImGui::PopStyleVar();
+    return;
+  }
+
+  const ImVec2 click_pos = ImGui::GetMousePosOnOpeningCurrentPopup();
+
+  if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+      !ImGui::IsAnyItemActive() &&
+      !ImGui::IsAnyMouseDown()) {
+    ImGui::SetKeyboardFocusHere(0);
+  }
+
+  bool pick_first = ImGui::InputText("##search", &search, ImGuiInputTextFlags_EnterReturnsTrue);
+
+  auto add_node = [&](const std::string& menu_item, const std::function<std::shared_ptr<Node>()>& create_node) {
+    if (ImGui::MenuItem(menu_item.c_str()) || pick_first) {
+      std::shared_ptr<Node> node = create_node();
+      Graph::graph.addNode(node);
+      ImNodes::SetNodeScreenSpacePos(node->id, click_pos);
+
+      if (pick_first) {
+        ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+        ImGui::PopStyleVar();
+        search = "";
+        return true;
+      }
+    }
+    return false;
+  };
+
+  if (!search.empty()) {
+    for (const auto& submenu : menuItemToNodeCreator) {
+      for (const auto& [menu_item, create_node] : submenu.second) {
+        bool found = findStringIC(menu_item, search);
+        if (found && add_node(menu_item, create_node)) {
+          return;
+        }
+      }
+    }
+  } else {
+    for (const auto& submenu : menuItemToNodeCreator) {
+      if (ImGui::BeginMenu(submenu.first.c_str())) {
+        for (const auto& [menu_item, create_node] : submenu.second) {
+          add_node(menu_item, create_node);
+        }
+        ImGui::EndMenu();
+      }
+    }
+  }
+
+  ImGui::EndPopup();
+  ImGui::PopStyleVar();
+}
 
 void ShowNodesPanel() {
   ImGui::Begin("Node Editor");
   ImNodes::BeginNodeEditor();
-  {
-    const bool open_popup = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
-                            ImNodes::IsEditorHovered() && ((ImGui::IsKeyDown(ImGuiKey_A) && ImGui::IsKeyDown(ImGuiMod_Shift)) || ImGui::IsMouseDown(ImGuiMouseButton_Right));
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.f, 8.f));
-    if (!ImGui::IsAnyItemHovered() && open_popup) {
-      ImGui::OpenPopup("add node");
-    }
-
-    if (ImGui::BeginPopup("add node")) {
-      const ImVec2 click_pos = ImGui::GetMousePosOnOpeningCurrentPopup();
-
-      for (const auto& submenu : menuItemToNodeCreator) {
-        if (ImGui::BeginMenu(submenu.first.c_str())) {
-          for (const auto& [menuItem, createNode] : submenu.second) {
-            if (ImGui::MenuItem(menuItem.c_str())) {
-              std::shared_ptr<Node> node = createNode();
-              Graph::graph.addNode(node);
-
-              ImNodes::SetNodeScreenSpacePos(node->id, click_pos);
-            }
-          }
-          ImGui::EndMenu();
-        }
-      }
-      ImGui::EndPopup();
-    }
-    ImGui::PopStyleVar();
-  }
+  showAddNodeMenu();
 
   Graph::graph.render();
 

@@ -1,5 +1,6 @@
 #include "nodes.h"
 
+#include "../debug.h"
 #include "graph.h"
 #include "imgui_stdlib.h"
 
@@ -9,15 +10,19 @@ namespace NodeEditor {
 #define OUT(i) outputs[i]->value
 
 GroupInputNode::GroupInputNode() : Node("Group Input") {
-  addOutput("Group", AttributeType::Int, 0);
+  addOutput("Scene Time", AttributeType::Float, 0.0f);
+  addOutput("Delta Time", AttributeType::Float, 0.0f);
 }
 
 void GroupInputNode::display() {
   renderSockets();
-  ImGui::Text("Group Input");
+  if (!Debug::freezeTime) markDirty();
 }
 
-void GroupInputNode::evaluateInternal() {}
+void GroupInputNode::evaluateInternal() {
+  OUT(0) = Graph::globals.sceneTime;
+  OUT(1) = Graph::globals.deltaTime;
+}
 
 GroupOutputNode::GroupOutputNode() : Node("Group Output") {
   addInput("Output", AttributeType::Mesh, std::vector<Vertex>());
@@ -50,22 +55,6 @@ void ValueNode::display() {
 
 void ValueNode::evaluateInternal() {
   // printf("Evaluate ValueNode, Output is: %f\n", std::get<float>(outputs[0].value));
-}
-
-AddNode::AddNode() : Node("Add") {
-  addInput("A", AttributeType::Float, 0.0f);
-  addInput("B", AttributeType::Float, 0.0f);
-  addOutput("Result", AttributeType::Float, 0.0f);
-}
-
-void AddNode::display() {
-  renderSockets();
-}
-
-void AddNode::evaluateInternal() {
-  float a = IN(float, 0);
-  float b = IN(float, 1);
-  OUT(0) = a + b;
 }
 
 PrintNode::PrintNode() : Node("Print") {

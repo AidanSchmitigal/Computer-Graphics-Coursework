@@ -143,10 +143,16 @@ class Node : public std::enable_shared_from_this<Node> {
   void renderSockets();
 };
 
+struct Globals {
+  float sceneTime = 0.f;
+  float deltaTime = 0.f;
+};
+
 class GroupOutputNode;
 class Graph {
  public:
   static Graph graph;
+  static Globals globals;
 
   uint currentId = 0;
   // All nodes

@@ -26,7 +26,7 @@ void CombineXYZNode::evaluateInternal() {
   float& y = IN(float, 1);
   float& z = IN(float, 2);
 
-  OUT(3) = glm::vec3(x, y, z);
+  OUT(0) = glm::vec3(x, y, z);
 }
 
 SeparateXYZNode::SeparateXYZNode() : Node("Separate XYZ") {
@@ -58,7 +58,7 @@ void VectorAddNode::evaluateInternal() {
   glm::vec3& a = IN(glm::vec3, 0);
   glm::vec3& b = IN(glm::vec3, 1);
 
-  OUT(2) = a + b;
+  OUT(0) = a + b;
 }
 
 VectorSubtractNode::VectorSubtractNode() : Node("Vector Subtract") {
@@ -73,7 +73,7 @@ void VectorSubtractNode::evaluateInternal() {
   glm::vec3& a = IN(glm::vec3, 0);
   glm::vec3& b = IN(glm::vec3, 1);
 
-  OUT(2) = a - b;
+  OUT(0) = a - b;
 }
 
 VectorMultiplyNode::VectorMultiplyNode() : Node("Vector Multiply") {
@@ -88,7 +88,7 @@ void VectorMultiplyNode::evaluateInternal() {
   glm::vec3& a = IN(glm::vec3, 0);
   glm::vec3& b = IN(glm::vec3, 1);
 
-  OUT(2) = a * b;
+  OUT(0) = a * b;
 }
 
 VectorDivideNode::VectorDivideNode() : Node("Vector Divide") {
@@ -103,7 +103,7 @@ void VectorDivideNode::evaluateInternal() {
   glm::vec3& a = IN(glm::vec3, 0);
   glm::vec3& b = IN(glm::vec3, 1);
 
-  OUT(2) = a / b;
+  OUT(0) = a / b;
 }
 
 VectorLengthNode::VectorLengthNode() : Node("Vector Length") {
@@ -116,7 +116,7 @@ void VectorLengthNode::display() {
 void VectorLengthNode::evaluateInternal() {
   glm::vec3& v = IN(glm::vec3, 0);
 
-  OUT(1) = v.length();
+  OUT(0) = v.length();
 }
 
 VectorNormalizeNode::VectorNormalizeNode() : Node("Vector Normalize") {
@@ -129,7 +129,10 @@ void VectorNormalizeNode::display() {
 void VectorNormalizeNode::evaluateInternal() {
   glm::vec3& v = IN(glm::vec3, 0);
 
-  OUT(1) = v / glm::vec3(v.length());
+  OUT(0) = v / glm::vec3(v.length());
 }
+
+#undef IN
+#undef OUT
 
 }  // namespace NodeEditor

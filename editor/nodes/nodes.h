@@ -44,18 +44,6 @@ class ValueNode : public Node {
   }
 };
 
-class AddNode : public Node {
- public:
-  AddNode();
-  void display() override;
-  void evaluateInternal() override;
-
-  template <class Archive>
-  void serialize(Archive& archive) {
-    archive(cereal::base_class<Node>(this));
-  }
-};
-
 class PrintNode : public Node {
  public:
   PrintNode();
@@ -72,7 +60,6 @@ class PrintNode : public Node {
 
 }  // namespace NodeEditor
 
-CEREAL_REGISTER_TYPE(NodeEditor::AddNode)
 CEREAL_REGISTER_TYPE(NodeEditor::ValueNode)
 CEREAL_REGISTER_TYPE(NodeEditor::PrintNode)
 CEREAL_REGISTER_TYPE(NodeEditor::GroupInputNode)
