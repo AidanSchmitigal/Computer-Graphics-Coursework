@@ -66,8 +66,8 @@ static ImGuiKey ImGui_ImplGLUT_KeyToImGuiKey(int key)
         case 256 + GLUT_KEY_HOME:       return ImGuiKey_Home;
         case 256 + GLUT_KEY_END:        return ImGuiKey_End;
         case 256 + GLUT_KEY_INSERT:     return ImGuiKey_Insert;
-        case 127:                       return ImGuiKey_Delete;
-        case 8:                         return ImGuiKey_Backspace;
+        case 127:                       return ImGuiKey_Backspace;
+        case 8:                         return ImGuiKey_Delete;
         case ' ':                       return ImGuiKey_Space;
         case 13:                        return ImGuiKey_Enter;
         case 27:                        return ImGuiKey_Escape;
