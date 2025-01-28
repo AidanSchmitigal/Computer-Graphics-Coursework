@@ -36,8 +36,6 @@ bool viewShaderListPanel = true;
 bool viewShaderPropertiesPanel = true;
 
 void compileShaderProgram(std::unique_ptr<Shader>& shader);
-std::string GetGLTypeString(GLenum type);
-void InitializeUniform(Uniform& uniform);
 
 GLuint noise3dTexture;
 GLuint noise2dTexture;
@@ -246,6 +244,7 @@ void ShowShaderListPanel() {
 
 // MARK: Editor Panel
 void ShowShaderEditorPanel() {
+  return;
   if (selectedIndex != -1) {
     auto shader = shaders[selectedIndex].get();
     ImGui::Begin("Shader Editor");
@@ -429,6 +428,7 @@ void ShowShaderPropertiesPanel() {
           ImGui::EndCombo();
         }
       }
+
       ImGui::Separator();
       ImGui::PopID();
     }
@@ -446,291 +446,13 @@ void useSelectedShader() {
   // Set Uniforms
   for (int i = 0; i < shaders[selectedIndex]->uniforms.size(); i++) {
     auto& uniform = shaders[selectedIndex]->uniforms[i];
-    if (uniform.type == GL_FLOAT) {
-      auto& v = std::get<float>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), v);
-    } else if (uniform.type == GL_FLOAT_VEC2) {
-      auto& v = std::get<glm::vec2>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_VEC3) {
-      auto& v = std::get<glm::vec3>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_VEC4) {
-      auto& v = std::get<glm::vec4>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_DOUBLE) {
-      auto& v = std::get<double>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), v);
-    } else if (uniform.type == GL_INT) {
-      auto& v = std::get<int>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), v);
-    } else if (uniform.type == GL_INT_VEC2) {
-      auto& v = std::get<glm::ivec2>(uniform.value);
-      // shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_INT_VEC3) {
-      auto& v = std::get<glm::ivec3>(uniform.value);
-      // shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_INT_VEC4) {
-      auto& v = std::get<glm::ivec4>(uniform.value);
-      // shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_UNSIGNED_INT) {
-      auto& v = std::get<uint>(uniform.value);
-      // shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), v);
-    } else if (uniform.type == GL_BOOL) {
-      auto& v = std::get<bool>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), v);
-    } else if (uniform.type == GL_BOOL_VEC2) {
-      auto& v = std::get<glm::bvec2>(uniform.value);
-      // shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_BOOL_VEC3) {
-      auto& v = std::get<glm::bvec3>(uniform.value);
-      // shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_BOOL_VEC4) {
-      auto& v = std::get<glm::bvec4>(uniform.value);
-      // shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_MAT2) {
-      auto& v = std::get<glm::mat2>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_MAT3) {
-      auto& v = std::get<glm::mat3>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_MAT4) {
-      auto& v = std::get<glm::mat4>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_MAT2x3) {
-      auto& v = std::get<glm::mat2x3>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_MAT2x4) {
-      auto& v = std::get<glm::mat2x4>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_MAT3x2) {
-      auto& v = std::get<glm::mat3x2>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_MAT3x4) {
-      auto& v = std::get<glm::mat3x4>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_MAT4x2) {
-      auto& v = std::get<glm::mat4x2>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_MAT4x3) {
-      auto& v = std::get<glm::mat4x3>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_MAT2x3) {
-      auto& v = std::get<glm::mat2x3>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_MAT2x4) {
-      auto& v = std::get<glm::mat2x4>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_MAT3x4) {
-      auto& v = std::get<glm::mat3x4>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_MAT4x2) {
-      auto& v = std::get<glm::mat4x2>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_MAT4x3) {
-      auto& v = std::get<glm::mat4x3>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_MAT3x2) {
-      auto& v = std::get<glm::mat3x2>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_MAT3x4) {
-      auto& v = std::get<glm::mat3x4>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_FLOAT_MAT4x2) {
-      auto& v = std::get<glm::mat4x2>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
-    } else if (uniform.type == GL_SAMPLER_1D) {
-      auto& v = std::get<uint>(uniform.value);
-      // shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), v);
-    } else if (uniform.type == GL_SAMPLER_2D) {
-      auto& v = std::get<uint>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), 0);  // TODO: Check if this number is correct
-    } else if (uniform.type == GL_SAMPLER_3D) {
-      auto& v = std::get<uint>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), 1);
-    } else if (uniform.type == GL_SAMPLER_CUBE) {
-      // auto& v = std::get<GLuint>(uniform.value);
-      // shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), v);
-    } else if (uniform.type == GL_SAMPLER_1D_SHADOW) {
-      // auto& v = std::get<GLuint>(uniform.value);
-      // shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), v);
-    } else if (uniform.type == GL_SAMPLER_2D_SHADOW) {
-      // auto& v = std::get<GLuint>(uniform.value);
-      // shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), v);
-    }
+    SetShaderUniform(uniform, shaders[selectedIndex]->program);
   }
 }
 
-// MARK: GetGLTypeString
-std::string GetGLTypeString(GLenum type) {
-  switch (type) {
-    case GL_FLOAT:
-      return "float";
-    case GL_FLOAT_VEC2:
-      return "vec2";
-    case GL_FLOAT_VEC3:
-      return "vec3";
-    case GL_FLOAT_VEC4:
-      return "vec4";
-    case GL_DOUBLE:
-      return "double";
-    case GL_INT:
-      return "int";
-    case GL_INT_VEC2:
-      return "ivec2";
-    case GL_INT_VEC3:
-      return "ivec3";
-    case GL_INT_VEC4:
-      return "ivec4";
-    case GL_UNSIGNED_INT:
-      return "unsigned int";
-    case GL_BOOL:
-      return "bool";
-    case GL_BOOL_VEC2:
-      return "bvec2";
-    case GL_BOOL_VEC3:
-      return "bvec3";
-    case GL_BOOL_VEC4:
-      return "bvec4";
-    case GL_FLOAT_MAT2:
-      return "mat2";
-    case GL_FLOAT_MAT3:
-      return "mat3";
-    case GL_FLOAT_MAT4:
-      return "mat4";
-    case GL_FLOAT_MAT2x3:
-      return "mat2x3";
-    case GL_FLOAT_MAT2x4:
-      return "mat2x4";
-    case GL_FLOAT_MAT3x2:
-      return "mat3x2";
-    case GL_FLOAT_MAT3x4:
-      return "mat3x4";
-    case GL_FLOAT_MAT4x2:
-      return "mat4x2";
-    case GL_FLOAT_MAT4x3:
-      return "mat4x3";
-    case GL_SAMPLER_1D:
-      return "sampler1D";
-    case GL_SAMPLER_2D:
-      return "sampler2D";
-    case GL_SAMPLER_3D:
-      return "sampler3D";
-    case GL_SAMPLER_CUBE:
-      return "samplerCube";
-    case GL_SAMPLER_1D_SHADOW:
-      return "sampler1DShadow";
-    case GL_SAMPLER_2D_SHADOW:
-      return "sampler2DShadow";
-    default:
-      return "unknown";
-  }
-}
-
-// MARK: InitializeUniform
-void InitializeUniform(Uniform& uniform) {
-  switch (uniform.type) {
-    case GL_FLOAT:
-      if (uniform.name == "uKa")
-        uniform.value = (float)0.1f;
-      else if (uniform.name == "uKd")
-        uniform.value = (float)0.9f;
-      else if (uniform.name == "uKs")
-        uniform.value = (float)0.9f;
-      else if (uniform.name == "uShininess")
-        uniform.value = (float)10.0f;
-      else
-        uniform.value = (float)0.0f;
-      break;
-    case GL_FLOAT_VEC2:
-      uniform.value = glm::vec2();
-      break;
-    case GL_FLOAT_VEC3:
-      if (uniform.name.find("Color") != std::string::npos)
-        uniform.value = glm::vec3(static_cast<float>(rand()), static_cast<float>(rand()), static_cast<float>(rand())) / static_cast<float>(RAND_MAX);
-      else
-        uniform.value = glm::vec3();
-
-      break;
-    case GL_FLOAT_VEC4:
-      uniform.value = glm::vec4();
-      break;
-    case GL_DOUBLE:
-      uniform.value = (double)0.0;
-      break;
-    case GL_INT:
-      uniform.value = (int)0;
-      break;
-    case GL_INT_VEC2:
-      uniform.value = glm::ivec2();
-      break;
-    case GL_INT_VEC3:
-      uniform.value = glm::ivec3();
-      break;
-    case GL_INT_VEC4:
-      uniform.value = glm::ivec4();
-      break;
-    case GL_UNSIGNED_INT:
-      uniform.value = (uint)0;
-      break;
-    case GL_BOOL:
-      uniform.value = (bool)false;
-      break;
-    case GL_BOOL_VEC2:
-      uniform.value = glm::bvec2();
-      break;
-    case GL_BOOL_VEC3:
-      uniform.value = glm::bvec3();
-      break;
-    case GL_BOOL_VEC4:
-      uniform.value = glm::bvec4();
-      break;
-    case GL_FLOAT_MAT2:
-      uniform.value = glm::mat2();
-      break;
-    case GL_FLOAT_MAT3:
-      uniform.value = glm::mat3();
-      break;
-    case GL_FLOAT_MAT4:
-      uniform.value = glm::mat4();
-      break;
-    case GL_FLOAT_MAT2x3:
-      uniform.value = glm::mat2x3();
-      break;
-    case GL_FLOAT_MAT2x4:
-      uniform.value = glm::mat2x4();
-      break;
-    case GL_FLOAT_MAT3x2:
-      uniform.value = glm::mat3x2();
-      break;
-    case GL_FLOAT_MAT3x4:
-      uniform.value = glm::mat3x4();
-      break;
-    case GL_FLOAT_MAT4x2:
-      uniform.value = glm::mat4x2();
-      break;
-    case GL_FLOAT_MAT4x3:
-      uniform.value = glm::mat4x3();
-      break;
-    case GL_SAMPLER_1D:
-      break;
-    case GL_SAMPLER_2D:
-      uniform.value = (uint)0;
-      break;
-    case GL_SAMPLER_3D:
-      uniform.value = (uint)0;
-      break;
-    case GL_SAMPLER_CUBE:
-      break;
-    case GL_SAMPLER_1D_SHADOW:
-      break;
-    case GL_SAMPLER_2D_SHADOW:
-      break;
-    default:
-      printf("Unknown type: %d\n", uniform.type);
-      uniform.value = 0;  // Default fallback
-      break;
-  }
+// MARK: Register ImGui Settings Handler
+void RegisterImGuiSettingsHandler() {
+  // TODO: Remove
 }
 
 // MARK: texture_setup
@@ -738,19 +460,13 @@ void InitializeUniform(Uniform& uniform) {
 void InitTextures() {
   printf("Initializing noise textures\n");
   int size = 256;
-  const char* noise3d_path = "textures/noise3d.raw";
-  const char* noise2d_path = "textures/noise2d.raw";
+  char* noise3d_path = "textures/noise3d.064.raw";
+  char* noise2d_path = "textures/noise2d.raw";
 
   float* noise3d = new float[size * size * size];  // Changed to float for OpenGL compatibility
 
   // Try to load from file first
-  bool loaded = false;
-  if (FILE* f = fopen(noise3d_path, "rb")) {
-    size_t read = fread(noise3d, sizeof(float), size * size * size, f);
-    fclose(f);
-    loaded = (read == size * size * size);
-    printf("Loaded 3D noise from file: %s\n", loaded ? "success" : "failed");
-  }
+  bool loaded = loadTexture3D(noise3d_path, GL_TEXTURE0, &noise3dTexture, &size, &size, &size);
 
   // Generate if not loaded
   if (!loaded) {
@@ -770,21 +486,11 @@ void InitTextures() {
       fclose(f);
       printf("Saved 3D noise to file\n");
     }
-  }
-
-  glGenTextures(1, &noise3dTexture);
-  glBindTexture(GL_TEXTURE_3D, noise3dTexture);
-  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
-
-  glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, size, size, size, 0, GL_RED, GL_FLOAT, noise3d);
-
-  GLenum err = glGetError();
-  if (err != GL_NO_ERROR) {
-    printf("GL Error after texture creation: %d\n", err);
+    loaded = loadTexture3D(noise3d_path, GL_TEXTURE0, &noise3dTexture, &size, &size, &size);
+    if (!loaded) {
+      fprintf(stderr, "Could not load 3D noise texture from file\n");
+      return;
+    }
   }
 
   printf("Created 3D noise texture with size %d, and id %d\n", size, noise3dTexture);
@@ -820,6 +526,7 @@ void InitTextures() {
   }
 
   glGenTextures(1, &noise2dTexture);
+  glActiveTexture(GL_TEXTURE1);
   glBindTexture(GL_TEXTURE_2D, noise2dTexture);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -828,18 +535,8 @@ void InitTextures() {
 
   glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, size, size, 0, GL_RED, GL_FLOAT, noise2d);
 
-  err = glGetError();
-  if (err != GL_NO_ERROR) {
-    printf("GL Error after texture creation: %d\n", err);
-  }
-
   printf("Created 2D noise texture with size %d, and id %d\n", size, noise2dTexture);
   delete[] noise2d;
-
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_3D, noise3dTexture);
-  glActiveTexture(GL_TEXTURE1);
-  glBindTexture(GL_TEXTURE_2D, noise2dTexture);
 }
 
 }  // namespace ShaderEditor

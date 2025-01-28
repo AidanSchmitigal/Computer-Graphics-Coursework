@@ -44,7 +44,7 @@ bool loadTexture(char *file, GLuint *texture, int *width, int *height) {
   return true;
 }
 
-bool loadTexture3D(char *file, GLuint *texture, int *width, int *height, int *depth) {
+bool loadTexture3D(char *file, GLuint textureSlot, GLuint *texture, int *width, int *height, int *depth) {
   unsigned char *textureData = ReadTexture3D(file, width, height, depth);
   if (textureData == NULL) {
     fprintf(stderr, "Cannot open texture '%s'\n", file);
@@ -52,6 +52,7 @@ bool loadTexture3D(char *file, GLuint *texture, int *width, int *height, int *de
   } else {
     fprintf(stderr, "Opened '%s': width = %d ; height = %d ; depth = %d\n", file, *width, *height, *depth);
     glGenTextures(1, texture);
+    glActiveTexture(textureSlot);
     glBindTexture(GL_TEXTURE_3D, *texture);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -60,6 +61,11 @@ bool loadTexture3D(char *file, GLuint *texture, int *width, int *height, int *de
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA, *width, *height, *depth, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+      printf("GL Error after texture creation: %d\n", err);
+    }
   }
   return true;
 }

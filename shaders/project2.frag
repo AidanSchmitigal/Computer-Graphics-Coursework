@@ -37,7 +37,15 @@ void main() {
   // gl_FragColor = vec4(nv.xyz * 100., 1.);
   // return;
 
-  vec4 nv = (texture2D(uNoise2, st * uNoiseFreq) - 0.5) * uNoiseAmp;
+  // UNSUPPORTED (log once): POSSIBLE ISSUE: unit 0 GLD_TEXTURE_INDEX_2D is
+  // unloadable and bound to sampler type (Float) - using zero texture because
+  // texture unloadable
+
+  // vec4 nv = texture3D(uNoise3, vec3(st * uNoiseFreq, 0.)) * uNoiseAmp;
+  vec4 nv = texture2D(uNoise2, st * uNoiseFreq) * uNoiseAmp;
+  // gl_FragColor = vec4(nv.xyz * 100., 1.);
+  gl_FragColor = vec4(st.st, 0., 1.);
+  return;
 
   // blend OBJECTCOLOR and ELLIPSECOLOR by using the ellipse equation to decide
   // how close 	this fragment is to the ellipse border:

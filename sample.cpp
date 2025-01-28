@@ -586,6 +586,8 @@ void InitImGui() {
   ini_handler.WriteAllFn = UserData_WriteAll;
   ImGui::AddSettingsHandler(&ini_handler);
 
+  ShaderEditor::RegisterImGuiSettingsHandler();
+
   ImGuiIO &io = ImGui::GetIO();
   (void)io;
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls

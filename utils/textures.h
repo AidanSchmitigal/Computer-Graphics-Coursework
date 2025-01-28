@@ -12,4 +12,4 @@
 
 unsigned char *ReadTexture3D(char *filename, int *width, int *height, int *depth);
 bool loadTexture(char *file, GLuint *texture, int *width, int *height);
-bool loadTexture3D(char *file, GLuint *texture, int *width, int *height, int *depth);
+bool loadTexture3D(char *file, GLuint textureSlot, GLuint *texture, int *width, int *height, int *depth);

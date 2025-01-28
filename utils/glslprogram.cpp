@@ -77,6 +77,13 @@ bool GLSLProgram::CreateHelper(const char *file0, ...) {
   AttributeLocs.clear();
   UniformLocs.clear();
 
+  // Clear log file
+  FILE *logfile;
+  logfile = fopen("glsllog.txt", "w");
+  if (logfile != NULL) {
+    fprintf(logfile, "\n");
+  }
+
   CheckGlErrors("Before glCreateProgram");
   Program = glCreateProgram();
   CheckGlErrors("glCreateProgram");
@@ -201,7 +208,6 @@ bool GLSLProgram::CreateHelper(const char *file0, ...) {
     if (!SkipToNextVararg) {
       FILE *in;
       int length;
-      FILE *logfile;
 
       printf("Opening file: %s\n", file);
       printf("Opened file: %p\n", in);
@@ -249,10 +255,8 @@ bool GLSLProgram::CreateHelper(const char *file0, ...) {
             GLchar *infoLog = new GLchar[infoLogLen + 1];
             glGetShaderInfoLog(shader, infoLogLen, NULL, infoLog);
             infoLog[infoLogLen] = '\0';
-            logfile = fopen("glsllog.txt", "w");
             if (logfile != NULL) {
               fprintf(logfile, "\n%s\n", infoLog);
-              fclose(logfile);
             }
             fprintf(stderr, "\n%s\n", infoLog);
             delete[] infoLog;
@@ -308,11 +312,18 @@ bool GLSLProgram::CreateHelper(const char *file0, ...) {
     glGetProgramiv(Program, GL_VALIDATE_STATUS, &status);
     if (status == GL_FALSE) {
       fprintf(stderr, "Program is invalid.\n");
+      if (logfile != NULL) {
+        fprintf(logfile, "Program is invalid.\n");
+      }
       Valid = false;
     } else {
       if (Verbose)
         fprintf(stderr, "Shader Program validated.\n");
     }
+  }
+
+  if (logfile != NULL) {
+    fclose(logfile);
   }
 
   return Valid;
