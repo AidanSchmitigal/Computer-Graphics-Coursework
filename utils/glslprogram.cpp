@@ -208,11 +208,7 @@ bool GLSLProgram::CreateHelper(const char *file0, ...) {
     if (!SkipToNextVararg) {
       FILE *in;
       int length;
-
-      printf("Opening file: %s\n", file);
-      printf("Opened file: %p\n", in);
       in = fopen(file, "rb");
-      printf("Opened file: %p\n", in);
       if (in == NULL) {
         fprintf(stderr, "Cannot open shader file '%s'\n", file);
         Valid = false;
@@ -456,16 +452,16 @@ void GLSLProgram::Init() {
     CanDoTessellationShaders = true;
     CanDoGeometryShaders = true;
     CanDoFragmentShaders = true;
-    fprintf(stderr, "Your system's OpenGL is not telling me what extensions you have.\n");
-    fprintf(stderr, "So, I am going to assume that your system can handle:\n");
+    // fprintf(stderr, "Your system's OpenGL is not telling me what extensions you have.\n");
+    // fprintf(stderr, "So, I am going to assume that your system can handle: \t");
   }
 
-  if (CanDoVertexShaders) fprintf(stderr, "\tvertex shaders \n");
-  if (CanDoFragmentShaders) fprintf(stderr, "\tfragment shaders \n");
-  if (CanDoGeometryShaders) fprintf(stderr, "\tgeometry shaders \n");
-  if (CanDoTessellationShaders) fprintf(stderr, "\ttessellation control shaders \n");
-  if (CanDoTessellationShaders) fprintf(stderr, "\ttessellation evaluation shaders \n");
-  if (CanDoComputeShaders) fprintf(stderr, "\tcompute shaders \n");
+  // if (CanDoVertexShaders) fprintf(stderr, "vertex shaders, ");
+  // if (CanDoFragmentShaders) fprintf(stderr, "fragment shaders, ");
+  // if (CanDoGeometryShaders) fprintf(stderr, "geometry shaders, ");
+  // if (CanDoTessellationShaders) fprintf(stderr, "tessellation control shaders, ");
+  // if (CanDoTessellationShaders) fprintf(stderr, "tessellation evaluation shaders, ");
+  // if (CanDoComputeShaders) fprintf(stderr, "compute shaders, ");
 
   fprintf(stderr, "\n");
 }
@@ -878,6 +874,15 @@ void GLSLProgram::SetUniformVariable(char *name, float vals[3]) {
 };
 
 void GLSLProgram::SetUniformVariable(char *name, GLuint val) {
+  int loc;
+
+  if ((loc = GetUniformLocation(name)) >= 0) {
+    this->Use();
+    glUniform1i(loc, val);
+  }
+};
+
+void GLSLProgram::SetUniformVariable(char *name, bool val) {
   int loc;
 
   if ((loc = GetUniformLocation(name)) >= 0) {

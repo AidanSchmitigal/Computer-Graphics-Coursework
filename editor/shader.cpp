@@ -22,7 +22,7 @@
 #endif
 
 #include "utils/simplex.h"
-#include "utils/textures.h"
+#include "utils/texture.h"
 
 namespace ShaderEditor {
 
@@ -40,9 +40,9 @@ void compileShaderProgram(std::unique_ptr<Shader>& shader);
 GLuint noise3dTexture;
 GLuint noise2dTexture;
 
-const std::array<GLuint*, 1> textures2D = {&noise2dTexture};
+// const std::array<GLuint*, 1> textures2D = {&noise2dTexture};
 const std::array<const char*, 1> textures2DNames = {"noise2d"};
-const std::array<GLuint*, 1> textures3D = {&noise3dTexture};
+// const std::array<GLuint*, 1> textures3D = {&noise3dTexture};
 const std::array<const char*, 1> textures3DNames = {"noise3d"};
 
 // MARK: findShaders
@@ -143,7 +143,7 @@ void compileShaderProgram(std::unique_ptr<Shader>& shader) {
       return uniform.name == lname;
     });
     if (existingUniform == shader->uniforms.end()) {
-      printf("Found new uniform: %s\n", lname);
+      // printf("Found new uniform: %s\n", lname);
 
       // New uniform
       shader->uniforms.emplace_back(lsize, ltype, lname);
@@ -223,7 +223,6 @@ void ShowShaderListPanel() {
         const bool is_selected = (selectedIndex == i);
         if (ImGui::Selectable(shaders[i]->name, is_selected)) {
           setSelectedShader(i);
-          printf("CLICKED!!\n");
         }
 
         // if (ImGui::IsItemHovered())
@@ -456,87 +455,29 @@ void RegisterImGuiSettingsHandler() {
 }
 
 // MARK: texture_setup
-
 void InitTextures() {
   printf("Initializing noise textures\n");
   int size = 256;
-  char* noise3d_path = "textures/noise3d.064.raw";
-  char* noise2d_path = "textures/noise2d.raw";
+  const char* noise3d_path = "textures/noise3d.064.raw";
+  const char* noise2d_path = "textures/noise2d.064.raw";
 
-  float* noise3d = new float[size * size * size];  // Changed to float for OpenGL compatibility
-
-  // Try to load from file first
   bool loaded = loadTexture3D(noise3d_path, GL_TEXTURE0, &noise3dTexture, &size, &size, &size);
 
-  // Generate if not loaded
   if (!loaded) {
-    for (int z = 0; z < size; z++) {
-      for (int y = 0; y < size; y++) {
-        for (int x = 0; x < size; x++) {
-          int idx = x + y * size + z * size * size;
-          // double val = noise_eval3d(static_cast<double>(x) / static_cast<double>(size), static_cast<double>(y) / static_cast<double>(size), static_cast<double>(z) / static_cast<double>(size));
-          double randomValue = static_cast<double>(rand()) / static_cast<double>(RAND_MAX);
-          noise3d[idx] = (float)((randomValue + 1.0) * 0.5);
-        }
-      }
-    }
-
-    if (FILE* f = fopen(noise3d_path, "wb")) {
-      fwrite(noise3d, sizeof(float), size * size * size, f);
-      fclose(f);
-      printf("Saved 3D noise to file\n");
-    }
-    loaded = loadTexture3D(noise3d_path, GL_TEXTURE0, &noise3dTexture, &size, &size, &size);
-    if (!loaded) {
-      fprintf(stderr, "Could not load 3D noise texture from file\n");
-      return;
-    }
+    fprintf(stderr, "Could not load 3D noise texture from file\n");
+    return;
   }
 
   printf("Created 3D noise texture with size %d, and id %d\n", size, noise3dTexture);
-  delete[] noise3d;
 
-  // 2D Noise Texture
-  float* noise2d = new float[size * size];
+  loaded = loadTexture2D(noise2d_path, GL_TEXTURE1, &noise2dTexture, &size, &size);
 
-  loaded = false;
-  if (FILE* f = fopen(noise2d_path, "rb")) {
-    size_t read = fread(noise2d, sizeof(float), size * size, f);
-    fclose(f);
-    loaded = (read == size * size);
-    printf("Loaded 2D noise from file: %s\n", loaded ? "success" : "failed");
-  }
-
-  // Generate if not loaded
   if (!loaded) {
-    for (int y = 0; y < size; y++) {
-      for (int x = 0; x < size; x++) {
-        int idx = x + y * size;
-        // double val = noise_eval2d(static_cast<double>(x) / 10.0, static_cast<double>(y) / 10.0);
-        double randomValue = static_cast<double>(rand()) / static_cast<double>(RAND_MAX);
-        noise2d[idx] = (float)((randomValue + 1.0) * 0.5);
-      }
-    }
-
-    if (FILE* f = fopen(noise2d_path, "wb")) {
-      fwrite(noise2d, sizeof(float), size * size, f);
-      fclose(f);
-      printf("Saved 2D noise to file\n");
-    }
+    fprintf(stderr, "Could not load 2D noise texture from file\n");
+    return;
   }
-
-  glGenTextures(1, &noise2dTexture);
-  glActiveTexture(GL_TEXTURE1);
-  glBindTexture(GL_TEXTURE_2D, noise2dTexture);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, size, size, 0, GL_RED, GL_FLOAT, noise2d);
 
   printf("Created 2D noise texture with size %d, and id %d\n", size, noise2dTexture);
-  delete[] noise2d;
 }
 
 }  // namespace ShaderEditor

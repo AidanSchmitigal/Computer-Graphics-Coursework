@@ -32,24 +32,30 @@ void main() {
   vec3 myColor = OBJECTCOLOR;
   vec2 st = vST;
 
-  // // float nv = texture3D(uNoise3, uNoiseFreq * vMC);
-  // vec4 nv = texture3D(uNoise3, uNoiseFreq * vec3(vST, 0.));
-  // // gl_FragColor = vec4(texture3D(uNoise3, vec3(5., 5., 0.)).xyz, 1.);
-  // gl_FragColor = vec4(nv.xyz * 100., 1.);
-  // return;
-
   vec4 nv = vec4(0.0, 0.0, 0.0, 0.0);
 
-  if (uUseNoise) {
+  // =================
+  // Error "Program Invalid" happens when using 2 textures
+  // =================
+
+  if (uUseNoise == true) {
     nv = texture3D(uNoise3, uNoiseFreq * vMC) * uNoiseAmp;
   } else {
-    nv = texture2D(uNoise2, st * uNoiseFreq) * uNoiseAmp;
+    nv = texture3D(uNoise3, uNoiseFreq * vMC) * uNoiseAmp;
+    // nv = texture2D(uNoise2, st * uNoiseFreq) * uNoiseAmp;
   }
+
+  // =================
+  // It also has the error outside of the if statement
+  // =================
+  /*
+    nv = texture3D(uNoise3, uNoiseFreq * vMC) * uNoiseAmp;
+    nv = texture2D(uNoise2, st * uNoiseFreq) * uNoiseAmp;
+  */
+
   float n = nv.r + nv.g + nv.b + nv.a; // range is 1. -> 3.
   n = n - 2.;                          // range is now -1. -> 1.
   n *= uNoiseAmp;
-  // gl_FragColor = vec4(nv.xyz, 1.);
-  // return;
 
   // blend OBJECTCOLOR and ELLIPSECOLOR by using the ellipse equation to decide
   // how close 	this fragment is to the ellipse border:
@@ -58,8 +64,6 @@ void main() {
 
   float sc = fract((st.s) / uAd);
   float tc = fract((st.t) / uBd);
-  // float sc = fract(nv.s / uAd);
-  // float tc = fract(nv.t / uBd);
 
   float Ar = 0.5;
   float Br = 0.5;

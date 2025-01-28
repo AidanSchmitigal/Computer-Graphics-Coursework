@@ -39,7 +39,7 @@ struct bmih {
 } InfoHeader;
 
 unsigned char *
-BmpToTexture(char *filename, int *width, int *height) {
+BmpToTexture(const char *filename, int *width, int *height) {
   FILE *fp;
 #ifdef _WIN32
   errno_t err = fopen_s(&fp, filename, "rb");

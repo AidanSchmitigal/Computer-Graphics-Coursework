@@ -80,11 +80,6 @@
 const char *WINDOWTITLE = "OpenGL / GLFW Sample -- Aidan Schmitigal";
 const char *GLUITITLE = "User Interface Window";
 
-// what the glui package defines as true and false:
-
-const int GLUITRUE = true;
-const int GLUIFALSE = false;
-
 // the escape key:
 
 const int ESCAPE = 0x1b;
@@ -103,11 +98,6 @@ const float SCLFACT = 0.005f;
 // minimum allowable scale factor:
 
 const float MINSCALE = 0.05f;
-
-// scroll wheel button values:
-
-const int SCROLL_WHEEL_UP = 3;
-const int SCROLL_WHEEL_DOWN = 4;
 
 // equivalent mouse movement when we click the scroll wheel:
 
@@ -526,40 +516,40 @@ static void *UserData_ReadOpen(ImGuiContext *, ImGuiSettingsHandler *, const cha
 }
 
 static void UserData_ReadLine(ImGuiContext *, ImGuiSettingsHandler *, void *entry, const char *line) {
-  printf("UserDat_ReadLine: %s | %s\n", entry, line);
+  // printf("UserDat_ReadLine: %s | %s\n", entry, line);
   // Line example: "ViewDebugPanel = 0" or "ViewDemoWindow = 1"
 
   if (strncmp(line, "ViewDebugPanel =", 16) == 0) {
     Debug::viewDebugPanel = atoi(line + 17);
-    printf("ViewDebugPanel: %d\n", Debug::viewDebugPanel);
+    // printf("ViewDebugPanel: %d\n", Debug::viewDebugPanel);
   } else if (strncmp(line, "ViewDemoWindow =", 16) == 0) {
     Debug::viewDemoWindow = atoi(line + 17);
-    printf("ViewDemoWindow: %d\n", Debug::viewDemoWindow);
+    // printf("ViewDemoWindow: %d\n", Debug::viewDemoWindow);
   } else if (strncmp(line, "ViewAssetBrowser =", 18) == 0) {
     Assets::viewAssetBrowser = atoi(line + 19);
-    printf("ViewAssetBrowser: %d\n", Assets::viewAssetBrowser);
+    // printf("ViewAssetBrowser: %d\n", Assets::viewAssetBrowser);
   } else if (strncmp(line, "ViewLightsPanel =", 17) == 0) {
     LightsEditor::viewLightsPanel = atoi(line + 18);
-    printf("ViewLightsPanel: %d\n", LightsEditor::viewLightsPanel);
+    // printf("ViewLightsPanel: %d\n", LightsEditor::viewLightsPanel);
   } else if (strncmp(line, "ViewConsolePanel =", 17) == 0) {
     ConsoleWindow::viewConsolePanel = atoi(line + 18);
-    printf("ViewConsolePanel: %d\n", ConsoleWindow::viewConsolePanel);
+    // printf("ViewConsolePanel: %d\n", ConsoleWindow::viewConsolePanel);
   } else if (strncmp(line, "ViewOverlay =", 13) == 0) {
     Debug::viewOverlay = atoi(line + 14);
-    printf("ViewOverlay: %d\n", Debug::viewOverlay);
+    // printf("ViewOverlay: %d\n", Debug::viewOverlay);
   } else if (strncmp(line, "ViewOverlayLocation =", 21) == 0) {
     Debug::overlayLocation = atoi(line + 22);
-    printf("ViewOverlayLocation: %d\n", Debug::overlayLocation);
+    // printf("ViewOverlayLocation: %d\n", Debug::overlayLocation);
     // } else if (strncmp(line, "ViewShaderEditorPanel =", 23) == 0) {
     //   ShaderEditor::viewShaderEditorPanel = atoi(line + 24);
-    //   printf("ViewShaderEditorPanel: %d\n", ShaderEditor::viewShaderEditorPanel);
+    // printf("ViewShaderEditorPanel: %d\n", ShaderEditor::viewShaderEditorPanel);
   } else {
-    printf("Unknown: %s\n", line);
+    printf("Unknown Line: %s\n", line);
   }
 }
 
 static void UserData_WriteAll(ImGuiContext *ctx, ImGuiSettingsHandler *handler, ImGuiTextBuffer *buf) {
-  printf("UserData_WriteAll\n");
+  printf("Saving...\n");
   buf->appendf("[%s][%s]\n", "UserData", "Panel Visbility");
   buf->appendf("%s = %d\n", "ViewDebugPanel", Debug::viewDebugPanel);
   buf->appendf("%s = %d\n", "ViewDemoWindow", Debug::viewDemoWindow);
@@ -655,7 +645,7 @@ void Keyboard(GLFWwindow *window, int key, int scancode, int action, int mods) {
   if (io.WantCaptureKeyboard)
     return;
 
-  printf("Keyboard: %i, %i, %i, %i\n", key, scancode, action, mods);
+  // printf("Keyboard: %i, %i, %i, %i\n", key, scancode, action, mods);
 
   switch (key) {
     case '=':
@@ -685,8 +675,8 @@ void Keyboard(GLFWwindow *window, int key, int scancode, int action, int mods) {
       ExitProgram();
       break;  // happy compiler
 
-    default:
-      fprintf(stderr, "Don't know what to do with keyboard hit: '%c' (0x%0x)\n", key, key);
+      // default:
+      // fprintf(stderr, "Don't know what to do with keyboard hit: '%c' (0x%0x)\n", key, key);
   }
 }
 
@@ -697,7 +687,7 @@ void MouseButton(GLFWwindow *window, int button, int action, int mods) {
   if (io.WantCaptureMouse)
     return;
 
-  printf("MouseButton: %i, %i, %i\n", button, action, mods);
+  // printf("MouseButton: %i, %i, %i\n", button, action, mods);
 }
 
 // called when the mouse moves while a button is down:
@@ -755,7 +745,7 @@ void Resize(GLFWwindow *window, int width, int height) {
 // handle a change to the window's visibility:
 // MARK: Visibility
 void Visibility(GLFWwindow *window, int state) {
-  printf("Visibility: %i\n", state);
+  // printf("Visibility: %i\n", state);
   WindowVisible = state == GLFW_TRUE;
 }
 

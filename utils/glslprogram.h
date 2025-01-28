@@ -160,6 +160,7 @@ class GLSLProgram {
   void SetUniformVariable(char *, float, float, float, float);
   void SetUniformVariable(char *, float[3]);
   void SetUniformVariable(char *, GLuint);
+  void SetUniformVariable(char *, bool);
 
 #ifdef GLM
   void SetUniformVariable(char *, glm::vec3);

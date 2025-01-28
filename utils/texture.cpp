@@ -1,10 +1,10 @@
-#include "textures.h"
+#include "texture.h"
 
 #include <stdio.h>
 
 #include "bmptotexture.h"
 
-unsigned char *ReadTexture3D(char *filename, int *width, int *height, int *depth) {
+unsigned char *ReadTexture3D(const char *filename, int *width, int *height, int *depth) {
   FILE *fp = fopen(filename, "rb");
   if (fp == NULL) {
     fprintf(stderr, "Cannot find the file '%s'\n", filename);
@@ -25,7 +25,23 @@ unsigned char *ReadTexture3D(char *filename, int *width, int *height, int *depth
   return texture;
 }
 
-bool loadTexture(char *file, GLuint *texture, int *width, int *height) {
+unsigned char *ReadTexture2D(const char *filename, int *width, int *height) {
+  FILE *fp = fopen(filename, "rb");
+  if (fp == NULL)
+    return NULL;
+  int nums, numt;
+  fread(&nums, 4, 1, fp);
+  fread(&numt, 4, 1, fp);
+  fprintf(stderr, "Texture size = % d x % d\n", nums, numt);
+  *width = nums;
+  *height = numt;
+  unsigned char *texture = new unsigned char[4 * nums * numt];
+  fread(texture, 4 * nums * numt, 1, fp);
+  fclose(fp);
+  return texture;
+}
+
+bool loadImageTexture(const char *file, GLuint *texture, int *width, int *height) {
   unsigned char *textureData = BmpToTexture(file, width, height);
   if (textureData == NULL) {
     fprintf(stderr, "Cannot open texture '%s'\n", file);
@@ -44,7 +60,26 @@ bool loadTexture(char *file, GLuint *texture, int *width, int *height) {
   return true;
 }
 
-bool loadTexture3D(char *file, GLuint textureSlot, GLuint *texture, int *width, int *height, int *depth) {
+bool loadTexture2D(const char *file, GLuint textureSlot, GLuint *texture, int *width, int *height) {
+  unsigned char *textureData = ReadTexture2D(file, width, height);
+  if (textureData == NULL) {
+    fprintf(stderr, "Cannot open texture '%s'\n", file);
+    return false;
+  } else {
+    fprintf(stderr, "Opened '%s': width = %d ; height = %d\n", file, *width, *height);
+    glGenTextures(1, texture);
+    glBindTexture(GL_TEXTURE_2D, *texture);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, *width, *height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureData);
+  }
+  return true;
+}
+
+bool loadTexture3D(const char *file, GLuint textureSlot, GLuint *texture, int *width, int *height, int *depth) {
   unsigned char *textureData = ReadTexture3D(file, width, height, depth);
   if (textureData == NULL) {
     fprintf(stderr, "Cannot open texture '%s'\n", file);
