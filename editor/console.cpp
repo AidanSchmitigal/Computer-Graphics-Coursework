@@ -19,6 +19,8 @@
 
 namespace ConsoleWindow {
 
+bool viewConsolePanel = true;
+
 int pipefd[2];
 int stdout_backup;
 std::thread read_thread;
@@ -87,6 +89,8 @@ void DestroyConsole() {
 }
 
 void ShowConsolePanel() {
+  if (!viewConsolePanel) return;
+
   ImGui::Begin("Console");
 
   // Add a clear button

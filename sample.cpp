@@ -14,8 +14,9 @@
 #endif
 
 #include "imgui.h"
-#include "imgui_impl_glut.h"
-#include "imgui_impl_opengl2.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include "imgui_internal.h"
 
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
@@ -26,12 +27,15 @@
 
 #include "glew.h"
 #endif
-#include "glut.h"
+
+#include <GLFW/glfw3.h>
 
 #define GLM_FORCE_RADIANS
+#include "editor/assets.h"
 #include "editor/console.h"
 #include "editor/debug.h"
 #include "editor/lightswindow.h"
+#include "editor/shader.h"
 #include "editor/style.h"
 #include "glm/gtc/matrix_inverse.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -53,10 +57,10 @@
 // #include "bmptotexture.cpp"
 // #include "loadobjfile.cpp"
 
-//	This is a sample OpenGL / GLUT program
+//	This is a sample OpenGL / GLFW program
 //
 //	The objective is to draw a 3d object and change the color of the axes
-//		with a glut menu
+//		with a glfw menu
 //
 //	The left mouse button does rotation
 //	The middle mouse button does scaling
@@ -73,7 +77,7 @@
 
 // title of these windows:
 
-const char *WINDOWTITLE = "OpenGL / GLUT Sample -- Aidan Schmitigal";
+const char *WINDOWTITLE = "OpenGL / GLFW Sample -- Aidan Schmitigal";
 const char *GLUITITLE = "User Interface Window";
 
 // what the glui package defines as true and false:
@@ -109,12 +113,6 @@ const int SCROLL_WHEEL_DOWN = 4;
 
 const float SCROLL_WHEEL_CLICK_FACTOR = 5.f;
 
-// active mouse buttons (or them together):
-
-const int LEFT = 4;
-const int MIDDLE = 2;
-const int RIGHT = 1;
-
 // line width for the axes:
 
 const GLfloat AXES_WIDTH = 3.;
@@ -125,13 +123,14 @@ const GLfloat AXES_WIDTH = 3.;
 
 // non-constant global variables:
 
-int ActiveButton = 0;       // current button that is down
+float Xmouse, Ymouse;  // mouse values
+
 GLuint AxesList;            // list to hold the axes
-int MainWindow;             // window id for main graphics window
+GLFWwindow *MainWindow;     // window id for main graphics window
+bool WindowVisible = true;  // is the window visible?
 float Scale = 0.3;          // scaling factor
 float SceneTime = 0.0;      // used for animation, # of seconds elapsed
-float DeltaTime = 0.0;      // used for animation, # of seconds elapsed
-int Xmouse, Ymouse;         // mouse values
+float DeltaTime = 0.0;      // used for animation, # of seconds since last frame
 float Xrot = 20, Yrot = 0;  // rotation angles in degrees
 
 int SphereList;
@@ -143,24 +142,21 @@ float scene_window_height = INIT_WINDOW_HEIGHT;
 void Animate();
 void DisplayImGui();
 void Display();
-void DoRasterString(float, float, float, char *);
-void DoStrokeString(float, float, float, float, char *);
-float ElapsedSeconds();
 void InitGraphics();
 void InitImGui();
 void InitAnimations();
 void InitLists();
-void Keyboard(unsigned char, int, int);
-void KeyboardUp(unsigned char, int, int);
-void KeyboardSpecial(int, int, int);
-void KeyboardSpecialUp(int, int, int);
-void MouseButton(int, int, int, int);
-void MouseMotion(int, int);
-void MouseMotionPassive(int, int);
+
+// Event Callbacks
+void Keyboard(GLFWwindow *window, int key, int scancode, int action, int mods);
+void MouseButton(GLFWwindow *window, int button, int action, int mods);
+void MouseMotion(GLFWwindow *window, double xpos, double ypos);
+void MouseWheel(GLFWwindow *window, double xoffset, double yoffset);
+void Resize(GLFWwindow *window, int width, int height);
+void Visibility(GLFWwindow *window, int focused);
+
 void Reset();
 void ExitProgram();
-void Resize(int, int);
-void Visibility(int);
 
 void Axes(float);
 void HsvRgb(float[3], float[3]);
@@ -170,19 +166,29 @@ void HsvRgb(float[3], float[3]);
 float NowS0, NowT0, NowD;
 GLSLProgram Pattern;
 
-// main program:
+static void glfw_error_callback(int error, const char *description) {
+  fprintf(stderr, "GLFW Error %d: %s\n", error, description);
+}
 
+// main program:
+// MARK: Main
 int main(int argc, char *argv[]) {
+  // ConsoleWindow::CreateConsole();
+
+  glfwSetErrorCallback(glfw_error_callback);
+
   // turn on the glut package:
   // (do this before checking argc and argv since glutInit might
   // pull some command line arguments out)
 
-  glutInit(&argc, argv);
+  if (!glfwInit())
+    return 1;
 
   // setup all the graphics stuff:
   // this needs to be called once and only once!
 
   InitGraphics();
+
   noise_setseed(0);
 
   InitImGui();
@@ -191,166 +197,141 @@ int main(int argc, char *argv[]) {
 
   InitLists();
 
-  // draw the scene once and wait for some interaction:
-  // (this will never return)
+  while (!glfwWindowShouldClose(MainWindow)) {
+    // draw the scene once and wait for some interaction:
+    // (this will never return)
 
-  glutSetWindow(MainWindow);
-  glutMainLoop();
+    glfwPollEvents();
+    // If the window is minimized, we stop rendering the scene
+    if (glfwGetWindowAttrib(MainWindow, GLFW_ICONIFIED) == GLFW_TRUE || glfwGetWindowAttrib(MainWindow, GLFW_VISIBLE) == GLFW_FALSE) {
+      ImGui_ImplGlfw_Sleep(100);
+      continue;
+    }
+    Animate();
+    Display();
+    ShaderEditor::checkShaderFiles();
+  }
+
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplGlfw_Shutdown();
+  ImGui::DestroyContext();
+
+  glfwDestroyWindow(MainWindow);
+  glfwTerminate();
+
+  // ConsoleWindow::DestroyConsole();
+
   return 0;
 }
 
 void ExitProgram() {
-  printf("Exiting\n");
-
-  glutSetWindow(MainWindow);
-  glFinish();
-  glutDestroyWindow(MainWindow);
-
-  // Cleanup
-  ImGui_ImplOpenGL2_Shutdown();
-  ImGui_ImplGLUT_Shutdown();
-  ImGui::DestroyContext();
-
-  printf("Exitted\n");
-
-  exit(0);
+  glfwSetWindowShouldClose(MainWindow, GL_TRUE);
 }
 
 // this is where one would put code that is to be called
 // everytime the glut main loop has nothing to do
-//
 // this is typically where animation parameters are set
-//
-// do not call Display( ) from here -- let glutPostRedisplay( ) do it
-// MARK: Animate
-int ms = 0;
-void Animate() {
-  // put animation stuff in here -- change some global variables for Display( ) to find:
 
-  ms = glutGet(GLUT_ELAPSED_TIME);
-  DeltaTime = ms / 1000.f - SceneTime;
+// MARK: Animate
+double previousTime = 0;
+void Animate() {
+  double currentTime = glfwGetTime();
+  DeltaTime = currentTime - previousTime;
+  previousTime = currentTime;
+
   if (Debug::freezeTime == false) {
     SceneTime += DeltaTime;
   }
-  // for example, if you wanted to spin an object in Display( ), you might call: glRotatef( 360.f*Time,   0., 1., 0. );
-
-  // force a call to Display( ) next time it is convenient:
-
-  glutSetWindow(MainWindow);
-  glutPostRedisplay();
 }
 
 // MARK: DisplayImGui
-
 void DisplayImGui() {
-  // printf("DisplayImGui\n");
-  // Start the Dear ImGui frame
-  ImGui_ImplOpenGL2_NewFrame();
-  ImGui_ImplGLUT_NewFrame();
+  ImGui_ImplOpenGL3_NewFrame();
+  ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
+
   ImGuiIO &io = ImGui::GetIO();
 
-  // static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_NoDockingOverCentralNode;
-  // ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking;
-  // const ImGuiViewport *viewport = ImGui::GetMainViewport();
-  // ImGui::SetNextWindowPos(viewport->WorkPos);
-  // ImGui::SetNextWindowSize(viewport->WorkSize);
-  // ImGui::SetNextWindowViewport(viewport->ID);
-  // ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-  // ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-  // window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-  // window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-  // window_flags |= ImGuiWindowFlags_NoBackground;
+  const ImGuiViewport *viewport = ImGui::GetMainViewport();
+  ImGui::SetNextWindowPos(viewport->WorkPos);
+  ImGui::SetNextWindowSize(viewport->WorkSize);
+  ImGui::SetNextWindowViewport(viewport->ID);
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 
-  // ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-  // ImGui::Begin("DockSpaceWindow", NULL, window_flags);
-  // ImGui::PopStyleVar();
-  // ImGui::PopStyleVar(2);
+  ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking;
+  window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+  window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+  window_flags |= ImGuiWindowFlags_NoBackground;
 
-  // ImGuiID dockspace_id = ImGui::GetID("FullWindowDockSpace");
-  // ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+  ImGui::Begin("DockSpaceWindow", nullptr, window_flags);
+  ImGui::PopStyleVar(2);
 
-  // if (ImGui::BeginMainMenuBar()) {
-  //   ImGui::TextDisabled("(?)");
-  //   if (ImGui::BeginItemTooltip()) {
-  //     ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-  //     ImGui::TextUnformatted(
-  //         "When docking is enabled, you can ALWAYS dock MOST window into another! Try it now!"
-  //         "\n"
-  //         "- Drag from window title bar or their tab to dock/undock."
-  //         "\n"
-  //         "- Drag from window menu button (upper-left button) to undock an entire node (all windows)."
-  //         "\n"
-  //         "- Hold SHIFT to disable docking (if io.ConfigDockingWithShift == false, default)"
-  //         "\n"
-  //         "- Hold SHIFT to enable docking (if io.ConfigDockingWithShift == true)"
-  //         "\n\n"
-  //         "This demo app only demonstrate the use of ImGui::DockSpace() which allows you to manually create a docking node _within_ another window."
-  //         "\n\n"
-  //         "Read comments in ShowExampleAppDockSpace() for more details.");
-  //     ImGui::PopTextWrapPos();
-  //     ImGui::EndTooltip();
-  //   }
+  static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_NoDockingOverCentralNode | ImGuiDockNodeFlags_PassthruCentralNode;
+  ImGuiID dockspace_id = ImGui::GetID("FullWindowDockSpace");
+  ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 
-  //   ImGui::SameLine(ImGui::GetWindowWidth() - 60);
-  //   if (ImGui::MenuItem("Quit", "Alt+F4")) {
-  //     printf("Quit\n");
-  //     ExitProgram();
-  //   }
+  if (ImGui::BeginMainMenuBar()) {
+    ImGui::TextDisabled("(?)");
+    if (ImGui::BeginItemTooltip()) {
+      ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+      ImGui::TextUnformatted(
+          "When docking is enabled, you can ALWAYS dock MOST window into another! Try it now!"
+          "\n"
+          "- Drag from window title bar or their tab to dock/undock."
+          "\n"
+          "- Drag from window menu button (upper-left button) to undock an entire node (all windows)."
+          "\n"
+          "- Hold SHIFT to disable docking (if io.ConfigDockingWithShift == false, default)"
+          "\n"
+          "- Hold SHIFT to enable docking (if io.ConfigDockingWithShift == true)"
+          "\n\n"
+          "This demo app only demonstrate the use of ImGui::DockSpace() which allows you to manually create a docking node _within_ another window."
+          "\n\n"
+          "Read comments in ShowExampleAppDockSpace() for more details.");
+      ImGui::PopTextWrapPos();
+      ImGui::EndTooltip();
+    }
+    if (ImGui::BeginMenu("View")) {
+      ImGui::MenuItem("Asset Browser", nullptr, &Assets::viewAssetBrowser);
+      ImGui::MenuItem("Lights Editor", nullptr, &LightsEditor::viewLightsPanel);
+      ImGui::MenuItem("Console", nullptr, &ConsoleWindow::viewConsolePanel);
+      ImGui::MenuItem("Debug", nullptr, &Debug::viewDebugPanel);
+      ImGui::MenuItem("ImGui Demo", nullptr, &Debug::viewDemoWindow);
+      ImGui::MenuItem("Shader Editor", nullptr, &ShaderEditor::viewShaderListPanel);
+      ImGui::MenuItem("Overlay", nullptr, &Debug::viewOverlay);
+      ImGui::EndMenu();
+    }
+    ImGui::Text("%.1f FPS (%.3f ms)", io.Framerate, 1000.0f / io.Framerate);
 
-  //   ImGui::EndMainMenuBar();
-  // }
+    ImGui::SameLine(ImGui::GetWindowWidth() - 60);
+    if (ImGui::MenuItem("Quit", "Alt+F4")) {
+      printf("Quit\n");
+      ExitProgram();
+    }
 
-  // ImGui::End();
+    ImGui::EndMainMenuBar();
+  }
 
-  if (Debug::showDemoWindow)
-    ImGui::ShowDemoWindow(&Debug::showDemoWindow);
+  ImGui::End();
+
+  if (Debug::viewDemoWindow)
+    ImGui::ShowDemoWindow(&Debug::viewDemoWindow);
 
   LightsEditor::ShowLightsPanel();
   ConsoleWindow::ShowConsolePanel();
+  Assets::ShowExampleAppAssetsBrowser();
+  ShaderEditor::ShowShaderListPanel();
+  ShaderEditor::ShowShaderEditorPanel();
+  ShaderEditor::ShowShaderPropertiesPanel();
   Debug::ShowDebugPanel();
-  if (ImGui::Begin("Debug")) {
+  if (Debug::viewDebugPanel && ImGui::Begin("Debug")) {
     ImGui::DragFloat("Scale", &Scale, 0.01f, 0.f, 10.f);
+    ImGui::Text("Scene Time: %f", SceneTime);
     ImGui::End();
   }
 
-  // static ImGuiWindowFlags scene_window_flags = ImGuiWindowFlags_NoTitleBar;
-  // ImGuiWindowClass scene_window_class;
-  // scene_window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoUndocking;
-  // ImGui::SetNextWindowClass(&scene_window_class);
-
-  // ImGui::Begin("Scene", NULL, scene_window_flags);
-
-  // ImGui::BeginChild("Scene", ImVec2(0, 0), 0, ImGuiWindowFlags_NoScrollbar);
-
-  // we access the ImGui window size
-  // const float window_width = ImGui::GetContentRegionAvail().x;
-  // const float window_height = ImGui::GetContentRegionAvail().y;
-  // scene_window_width = window_width;
-  // scene_window_height = window_height;
-
-  // we rescale the framebuffer to the actual window size here and reset the glViewport
-  // rescale_framebuffer(window_width, window_height);
-  // glViewport(0, 0, window_width, window_height);
-
-  // ImVec2 pos = ImGui::GetCursorScreenPos();
-
-  // and here we can add our created texture as image to ImGui
-  // unfortunately we need to use the cast to void* or I didn't find another way tbh
-  // ImGui::GetWindowDrawList()->AddImage(
-  //     (ImTextureID)framebuffer_texture_id,
-  //     ImVec2(pos.x, pos.y),
-  //     ImVec2(pos.x + window_width, pos.y + window_height),
-  //     ImVec2(0, 1),
-  //     ImVec2(1, 0));
-
-  // ImGui::Text("%.1f FPS (%.3f ms)", io.Framerate, 1000.0f / io.Framerate);
-
-  // ImGuiSceneRenderHovered = ImGui::IsWindowHovered();
-
-  // ImGui::EndChild();
-
-  // ImGui::End();
+  Debug::ShowOverlay();
 
   // Rendering
   ImGui::Render();
@@ -359,26 +340,32 @@ void DisplayImGui() {
 // MARK: Display
 void Display() {
   DisplayImGui();
-  // printf("Display\n");
-  // set which window we want to do the graphics into:
-  glutSetWindow(MainWindow);
+
+  // set the viewport to be a square centered in the window:
+
+  int displayWidth, displayHeight;
+  glfwGetFramebufferSize(MainWindow, &displayWidth, &displayHeight);
+  glViewport(0, 0, displayWidth, displayHeight);
+
+  glEnable(GL_DEPTH_TEST);
 
   // erase the background:
   glDrawBuffer(GL_BACK);
   glClearColor(LightsEditor::clearColor[0] * LightsEditor::clearColor[3], LightsEditor::clearColor[1] * LightsEditor::clearColor[3], LightsEditor::clearColor[2] * LightsEditor::clearColor[3], LightsEditor::clearColor[3]);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  glEnable(GL_DEPTH_TEST);
-
   // specify shading to be flat:
+  if (Debug::flatShading) {
+    glShadeModel(GL_FLAT);
+  } else {
+    glShadeModel(GL_SMOOTH);
+  }
 
-  glShadeModel(GL_FLAT);
-
-  // set the viewport to be a square centered in the window:
-
-  GLsizei vx = glutGet(GLUT_WINDOW_WIDTH);
-  GLsizei vy = glutGet(GLUT_WINDOW_HEIGHT);
-  glViewport(0, 0, vx, vy);
+  if (Debug::showWireframe) {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  } else {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  }
 
   // set the viewing volume:
   // remember that the Z clipping  values are given as DISTANCES IN FRONT OF THE EYE
@@ -389,7 +376,7 @@ void Display() {
   // if (NowProjection == ORTHO)
   //   glOrtho(-2.f, 2.f, -2.f, 2.f, 0.1f, 1000.f);
   // else
-  gluPerspective(70.f, (GLdouble)vx / (GLdouble)vy, 0.1f, 1000.f);
+  gluPerspective(70.f, (GLdouble)displayWidth / (GLdouble)displayHeight, 0.1f, 1000.f);
 
   // place the objects into the scene:
 
@@ -432,65 +419,42 @@ void Display() {
 
   // draw the box object by calling up its display list:
 
-  Pattern.Use();
+  ShaderEditor::useSelectedShader();
+
+  // glUseProgram(5);
+
+  // Pattern.Use();
 
   // set the uniform variables that will change over time:
 
-  NowS0 = 0.5f;
-  NowT0 = 0.5f;
-  NowD = 0.2f + 0.1f * sinf(2.f * F_PI * SceneTime);
-  Pattern.SetUniformVariable((char *)"uS0", NowS0);
-  Pattern.SetUniformVariable((char *)"uT0", NowT0);
-  Pattern.SetUniformVariable((char *)"uD", NowD);
+  // NowS0 = 0.5f;
+  // NowT0 = 0.5f;
+  // NowD = 0.2f + 0.1f * sinf(2.f * F_PI * SceneTime);
+
+  // TODO:
+  // Pattern.SetUniformVariable((char *)"uAd", fmodf(SceneTime / 3.f, .5f));
+  // Pattern.SetUniformVariable((char *)"uBd", fmodf(SceneTime / 4.f, .5f));
+  // Pattern.SetUniformVariable((char *)"uTol", fmodf(SceneTime / 10.f, 1.f));
 
   glCallList(SphereList);
 
   Pattern.UnUse();  // Pattern.Use(0);  also works
+  // glUseProgram(0);
 
   // Render the ImGUIWindow
-  ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
+  // ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
+  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+  GLFWwindow *backup_current_context = glfwGetCurrentContext();
+  ImGui::UpdatePlatformWindows();
+  ImGui::RenderPlatformWindowsDefault();
+  glfwMakeContextCurrent(backup_current_context);
 
   // swap the double-buffered framebuffers:
-  glutSwapBuffers();
+  glfwSwapBuffers(MainWindow);
 
   // be sure the graphics buffer has been sent:
   glFlush();
-}
-
-// use glut to display a string of characters using a raster font:
-void DoRasterString(float x, float y, float z, char *s) {
-  glRasterPos3f((GLfloat)x, (GLfloat)y, (GLfloat)z);
-
-  char c;  // one character to print
-  for (; (c = *s) != '\0'; s++) {
-    glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, c);
-  }
-}
-
-// use glut to display a string of characters using a stroke font:
-
-void DoStrokeString(float x, float y, float z, float ht, char *s) {
-  glPushMatrix();
-  glTranslatef((GLfloat)x, (GLfloat)y, (GLfloat)z);
-  float sf = ht / (119.05f + 33.33f);
-  glScalef((GLfloat)sf, (GLfloat)sf, (GLfloat)sf);
-  char c;  // one character to print
-  for (; (c = *s) != '\0'; s++) {
-    glutStrokeCharacter(GLUT_STROKE_ROMAN, c);
-  }
-  glPopMatrix();
-}
-
-// return the number of seconds since the start of the program:
-
-float ElapsedSeconds() {
-  // get # of milliseconds since the start of the program:
-
-  int ms = glutGet(GLUT_ELAPSED_TIME);
-
-  // convert it to seconds:
-
-  return (float)ms / 1000.f;
 }
 
 // initialize the glut and OpenGL libraries:
@@ -517,105 +481,112 @@ void loadTexture(char *file, GLuint *texture, int *width, int *height) {
 void InitGraphics() {
   fprintf(stderr, "Starting InitGraphics.\n");
 
+  // glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+  // glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+  // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);  // Required on Mac
+  // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+  // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);  // 3.2+ only
+
   // request the display modes:
   // ask for red-green-blue-alpha color, double-buffering, and z-buffering:
 
-  glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
+  // glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
 
   // set the initial window configuration:
 
-  glutInitWindowPosition(0, 0);
-  int width = glutGet(GLUT_SCREEN_WIDTH);
-  int height = glutGet(GLUT_SCREEN_HEIGHT);
-  glutInitWindowSize(width, height);
-
   // open the window and set its title:
+  const GLFWvidmode *mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+  MainWindow = glfwCreateWindow(mode->width, mode->height, WINDOWTITLE, nullptr, nullptr);
+  if (MainWindow == nullptr) {
+    fprintf(stderr, "Could not open window with GLFW3\n");
+    glfwTerminate();
+    exit(EXIT_FAILURE);
+  }
+  glfwMakeContextCurrent(MainWindow);
+  glfwSwapInterval(1);  // Enable vsync
 
-  MainWindow = glutCreateWindow(WINDOWTITLE);
-  glutSetWindowTitle(WINDOWTITLE);
+  // ImGui will overwrite but save the callbacks and call them for us when an event happens.
 
-  // setup the callback functions:
-  // DisplayFunc -- redraw the window
-  // ReshapeFunc -- handle the user resizing the window
-  // KeyboardFunc -- handle a keyboard input
-  // MouseFunc -- handle the mouse button going down or up
-  // MotionFunc -- handle the mouse moving with a button down
-  // PassiveMotionFunc -- handle the mouse moving with a button up
-  // VisibilityFunc -- handle a change in window visibility
-  // EntryFunc	-- handle the cursor entering or leaving the window
-  // SpecialFunc -- handle special keys on the keyboard
-  // SpaceballMotionFunc -- handle spaceball translation
-  // SpaceballRotateFunc -- handle spaceball rotation
-  // SpaceballButtonFunc -- handle spaceball button hits
-  // ButtonBoxFunc -- handle button box hits
-  // DialsFunc -- handle dial rotations
-  // TabletMotionFunc -- handle digitizing tablet motion
-  // TabletButtonFunc -- handle digitizing tablet button hits
-  // MenuStateFunc -- declare when a pop-up menu is in use
-  // TimerFunc -- trigger something to happen a certain time from now
-  // IdleFunc -- what to do when nothing else is going on
+  glfwSetKeyCallback(MainWindow, Keyboard);
+  glfwSetMouseButtonCallback(MainWindow, MouseButton);
+  glfwSetCursorPosCallback(MainWindow, MouseMotion);
+  glfwSetWindowSizeCallback(MainWindow, Resize);
+  glfwSetScrollCallback(MainWindow, MouseWheel);
+  glfwSetWindowFocusCallback(MainWindow, Visibility);
 
-  glutSetWindow(MainWindow);
-  glutDisplayFunc(Display);
-  glutReshapeFunc(Resize);             // -> ImGui_ImplGLUT_ReshapeFunc
-  glutKeyboardFunc(Keyboard);          // -> ImGui_ImplGLUT_KeyboardFunc
-  glutKeyboardUpFunc(KeyboardUp);      // -> ImGui_ImplGLUT_KeyboardUpFunc
-  glutSpecialFunc(KeyboardSpecial);    // -> ImGui_ImplGLUT_SpecialFunc
-  glutSpecialFunc(KeyboardSpecialUp);  // -> ImGui_ImplGLUT_SpecialUpFunc
-  glutMouseFunc(MouseButton);          // -> ImGui_ImplGLUT_MouseFunc
-  glutMotionFunc(MouseMotion);         // -> ImGui_ImplGLUT_MotionFunc
-  glutPassiveMotionFunc(MouseMotionPassive);
-  // glutPassiveMotionFunc( NULL );
-  glutVisibilityFunc(Visibility);
-  glutEntryFunc(NULL);
-  glutSpecialFunc(NULL);
-  glutSpaceballMotionFunc(NULL);
-  glutSpaceballRotateFunc(NULL);
-  glutSpaceballButtonFunc(NULL);
-  glutButtonBoxFunc(NULL);
-  glutDialsFunc(NULL);
-  glutTabletMotionFunc(NULL);
-  glutTabletButtonFunc(NULL);
-  glutMenuStateFunc(NULL);
-  glutTimerFunc(-1, NULL, 0);
+  ShaderEditor::InitTextures();
 
-  // setup glut to call Animate( ) every time it has
-  // 	nothing it needs to respond to (which is most of the time)
-  // we don't need to do this for this program, and really should set the argument to NULL
-  // but, this sets us up nicely for doing animation
+  // TODO: Find a better spot of Program loading
+  // Pattern.Init();
+  // bool valid = Pattern.Create((char *)"./shaders/pattern.vert", (char *)"./shaders/pattern.frag");
+  // if (!valid)
+  //   fprintf(stderr, "Could not create the Pattern shader!\n");
+  // else
+  //   fprintf(stderr, "Pattern shader created!\n");
 
-  glutIdleFunc(Animate);
+  // // set the uniform variables that will not change:
 
-  // init the glew package (a window must be open to do this):
+  // Pattern.Use();
+  // Pattern.SetUniformVariable((char *)"uKa", 0.1f);
+  // Pattern.SetUniformVariable((char *)"uKd", 0.5f);
+  // Pattern.SetUniformVariable((char *)"uKs", 0.4f);
+  // Pattern.SetUniformVariable((char *)"uColor", 1.f, 0.5f, 0.f, 1.f);
+  // Pattern.SetUniformVariable((char *)"uSpecularColor", 1.f, 1.f, 1.f, 1.f);
+  // Pattern.SetUniformVariable((char *)"uShininess", 12.f);
+  // Pattern.UnUse();
+}
 
-#ifdef WIN32
-  GLenum err = glewInit();
-  if (err != GLEW_OK) {
-    fprintf(stderr, "glewInit Error\n");
-  } else
-    fprintf(stderr, "GLEW initialized OK\n");
-  fprintf(stderr, "Status: Using GLEW %s\n", glewGetString(GLEW_VERSION));
-#endif
+static void *UserData_ReadOpen(ImGuiContext *, ImGuiSettingsHandler *, const char *name) {
+  return (void *)"Panel Visibility";
+}
 
-  // all other setups go here, such as GLSLProgram and KeyTime setups:
+static void UserData_ReadLine(ImGuiContext *, ImGuiSettingsHandler *, void *entry, const char *line) {
+  printf("UserDat_ReadLine: %s | %s\n", entry, line);
+  // Line example: "ViewDebugPanel = 0" or "ViewDemoWindow = 1"
 
-  Pattern.Init();
-  bool valid = Pattern.Create((char *)"pattern.vert", (char *)"pattern.frag");
-  if (!valid)
-    fprintf(stderr, "Could not create the Pattern shader!\n");
-  else
-    fprintf(stderr, "Pattern shader created!\n");
+  if (strncmp(line, "ViewDebugPanel =", 16) == 0) {
+    Debug::viewDebugPanel = atoi(line + 17);
+    printf("ViewDebugPanel: %d\n", Debug::viewDebugPanel);
+  } else if (strncmp(line, "ViewDemoWindow =", 16) == 0) {
+    Debug::viewDemoWindow = atoi(line + 17);
+    printf("ViewDemoWindow: %d\n", Debug::viewDemoWindow);
+  } else if (strncmp(line, "ViewAssetBrowser =", 18) == 0) {
+    Assets::viewAssetBrowser = atoi(line + 19);
+    printf("ViewAssetBrowser: %d\n", Assets::viewAssetBrowser);
+  } else if (strncmp(line, "ViewLightsPanel =", 17) == 0) {
+    LightsEditor::viewLightsPanel = atoi(line + 18);
+    printf("ViewLightsPanel: %d\n", LightsEditor::viewLightsPanel);
+  } else if (strncmp(line, "ViewConsolePanel =", 17) == 0) {
+    ConsoleWindow::viewConsolePanel = atoi(line + 18);
+    printf("ViewConsolePanel: %d\n", ConsoleWindow::viewConsolePanel);
+  } else if (strncmp(line, "ViewOverlay =", 13) == 0) {
+    Debug::viewOverlay = atoi(line + 14);
+    printf("ViewOverlay: %d\n", Debug::viewOverlay);
+  } else if (strncmp(line, "ViewOverlayLocation =", 21) == 0) {
+    Debug::overlayLocation = atoi(line + 22);
+    printf("ViewOverlayLocation: %d\n", Debug::overlayLocation);
+    // } else if (strncmp(line, "ViewShaderEditorPanel =", 23) == 0) {
+    //   ShaderEditor::viewShaderEditorPanel = atoi(line + 24);
+    //   printf("ViewShaderEditorPanel: %d\n", ShaderEditor::viewShaderEditorPanel);
+  } else {
+    printf("Unknown: %s\n", line);
+  }
+}
 
-  // set the uniform variables that will not change:
-
-  Pattern.Use();
-  Pattern.SetUniformVariable((char *)"uKa", 0.1f);
-  Pattern.SetUniformVariable((char *)"uKd", 0.5f);
-  Pattern.SetUniformVariable((char *)"uKs", 0.4f);
-  Pattern.SetUniformVariable((char *)"uColor", 1.f, 0.5f, 0.f, 1.f);
-  Pattern.SetUniformVariable((char *)"uSpecularColor", 1.f, 1.f, 1.f, 1.f);
-  Pattern.SetUniformVariable((char *)"uShininess", 12.f);
-  Pattern.UnUse();
+static void UserData_WriteAll(ImGuiContext *ctx, ImGuiSettingsHandler *handler, ImGuiTextBuffer *buf) {
+  printf("UserData_WriteAll\n");
+  buf->appendf("[%s][%s]\n", "UserData", "Panel Visbility");
+  buf->appendf("%s = %d\n", "ViewDebugPanel", Debug::viewDebugPanel);
+  buf->appendf("%s = %d\n", "ViewDemoWindow", Debug::viewDemoWindow);
+  buf->appendf("%s = %d\n", "ViewAssetBrowser", Assets::viewAssetBrowser);
+  buf->appendf("%s = %d\n", "ViewLightsPanel", LightsEditor::viewLightsPanel);
+  buf->appendf("%s = %d\n", "ViewConsolePanel", ConsoleWindow::viewConsolePanel);
+  buf->appendf("%s = %d\n", "ViewOverlay", Debug::viewOverlay);
+  buf->appendf("%s = %d\n", "ViewOverlayLocation", Debug::overlayLocation);
+  // buf->appendf("%s = %d\n", "ViewShaderEditorPanel", ShaderEditor::viewShaderEditorPanel);
+  buf->append("\n");
 }
 
 // MARK: InitImGui
@@ -623,6 +594,14 @@ void InitImGui() {
   // Setup Dear ImGui context
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
+
+  ImGuiSettingsHandler ini_handler;
+  ini_handler.TypeName = "UserData";
+  ini_handler.TypeHash = ImHashStr("UserData");
+  ini_handler.ReadOpenFn = UserData_ReadOpen;
+  ini_handler.ReadLineFn = UserData_ReadLine;
+  ini_handler.WriteAllFn = UserData_WriteAll;
+  ImGui::AddSettingsHandler(&ini_handler);
 
   ImGuiIO &io = ImGui::GetIO();
   (void)io;
@@ -633,16 +612,13 @@ void InitImGui() {
   // Setup Dear ImGui style
   StyleColorsMaterial();
 
-  // Setup Platform/Renderer backends
-  ImGui_ImplGLUT_Init();
-  ImGui_ImplOpenGL2_Init();
+  ImGui::LoadIniSettingsFromDisk(ImGui::GetIO().IniFilename);
 
-  // Install GLUT handlers (glutReshapeFunc(), glutMotionFunc(), glutPassiveMotionFunc(), glutMouseFunc(), glutKeyboardFunc() etc.)
-  // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
-  // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
-  // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
-  // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-  ImGui_ImplGLUT_InstallFuncs();
+  // Setup Platform/Renderer backends
+  ImGui_ImplGlfw_InitForOpenGL(MainWindow, false);  // False for InstallCallbacks
+  ImGui_ImplOpenGL3_Init("#version 120");
+  // ImGui_ImplOpenGL3_Init("#version 330");
+  ImGui_ImplGlfw_InstallCallbacks(MainWindow);  // just so we can do it here for clarity
 
   // Load Fonts
   // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
@@ -670,8 +646,6 @@ void InitImGui() {
 void InitLists() {
   fprintf(stderr, "Starting InitLists.\n");
 
-  glutSetWindow(MainWindow);
-
   // create the object:
 
   SphereList = glGenLists(1);
@@ -690,21 +664,15 @@ void InitLists() {
 }
 
 // the keyboard callback:
+// MARK: Keyboard
+void Keyboard(GLFWwindow *window, int key, int scancode, int action, int mods) {
+  ImGuiIO &io = ImGui::GetIO();
+  if (io.WantCaptureKeyboard)
+    return;
 
-void Keyboard(unsigned char c, int x, int y) {
-  printf("Keyboard: %d, %d, %d\n", c, x, y);
+  printf("Keyboard: %i, %i, %i, %i\n", key, scancode, action, mods);
 
-  if (!ImGuiSceneRenderHovered) {
-    ImGui_ImplGLUT_KeyboardFunc(c, x, y);
-
-    ImGuiIO &io = ImGui::GetIO();
-    if (io.WantCaptureKeyboard)
-      return;
-  }
-
-  printf("Allowed keyboard to happen\n");
-
-  switch (c) {
+  switch (key) {
     case '=':
     case '+':
       Scale += SCLFACT * SCROLL_WHEEL_CLICK_FACTOR;
@@ -724,10 +692,6 @@ void Keyboard(unsigned char c, int x, int y) {
     case 'f':
     case 'F':
       Debug::freezeTime = !Debug::freezeTime;
-      if (Debug::freezeTime)
-        glutIdleFunc(NULL);
-      else
-        glutIdleFunc(Animate);
       break;
 
     case 'q':
@@ -737,127 +701,41 @@ void Keyboard(unsigned char c, int x, int y) {
       break;  // happy compiler
 
     default:
-      fprintf(stderr, "Don't know what to do with keyboard hit: '%c' (0x%0x)\n", c, c);
-  }
-
-  // force a call to Display( ):
-
-  glutSetWindow(MainWindow);
-  glutPostRedisplay();
-}
-
-// MARK: Keyboard Up
-void KeyboardUp(unsigned char c, int x, int y) {
-  if (!ImGuiSceneRenderHovered) {
-    ImGui_ImplGLUT_KeyboardUpFunc(c, x, y);
-  }
-
-  // ImGuiIO &io = ImGui::GetIO();
-  // if (io.WantCaptureKeyboard)
-  //   return;
-}
-
-// MARK: Keyboard Special
-void KeyboardSpecial(int key, int x, int y) {
-  if (!ImGuiSceneRenderHovered) {
-    ImGui_ImplGLUT_SpecialFunc(key, x, y);
-  }
-}
-
-// MARK: Keyboard Special Up
-void KeyboardSpecialUp(int key, int x, int y) {
-  if (!ImGuiSceneRenderHovered) {
-    ImGui_ImplGLUT_SpecialUpFunc(key, x, y);
+      fprintf(stderr, "Don't know what to do with keyboard hit: '%c' (0x%0x)\n", key, key);
   }
 }
 
 // called when the mouse button transitions down or up:
 // MARK: Mouse Button
-void MouseButton(int button, int state, int x, int y) {
-  printf("MouseButton: %d, %d, %d, %d\n", button, state, x, y);
-  if (!ImGuiSceneRenderHovered) {
-    ImGui_ImplGLUT_MouseFunc(button, state, x, y);
+void MouseButton(GLFWwindow *window, int button, int action, int mods) {
+  ImGuiIO &io = ImGui::GetIO();
+  if (io.WantCaptureMouse)
+    return;
 
-    ImGuiIO &io = ImGui::GetIO();
-    if (io.WantCaptureMouse)
-      return;
-  }
-
-  printf("Allowed mouse to happen\n");
-
-  int b = 0;  // LEFT, MIDDLE, or RIGHT
-
-  // get the proper button bit mask:
-  switch (button) {
-    case GLUT_LEFT_BUTTON:
-      b = LEFT;
-      break;
-
-    case GLUT_MIDDLE_BUTTON:
-      b = MIDDLE;
-      break;
-
-    case GLUT_RIGHT_BUTTON:
-      b = RIGHT;
-      break;
-
-    case SCROLL_WHEEL_UP:
-      Scale += SCLFACT * SCROLL_WHEEL_CLICK_FACTOR;
-      // keep object from turning inside-out or disappearing:
-      if (Scale < MINSCALE)
-        Scale = MINSCALE;
-      break;
-
-    case SCROLL_WHEEL_DOWN:
-      Scale -= SCLFACT * SCROLL_WHEEL_CLICK_FACTOR;
-      // keep object from turning inside-out or disappearing:
-      if (Scale < MINSCALE)
-        Scale = MINSCALE;
-      break;
-
-    default:
-      b = 0;
-      fprintf(stderr, "Unknown mouse button: %d\n", button);
-  }
-
-  // button down sets the bit, up clears the bit:
-
-  if (state == GLUT_DOWN) {
-    Xmouse = x;
-    Ymouse = y;
-    ActiveButton |= b;  // set the proper bit
-  } else {
-    ActiveButton &= ~b;  // clear the proper bit
-  }
-
-  glutSetWindow(MainWindow);
-  glutPostRedisplay();
+  printf("MouseButton: %i, %i, %i\n", button, action, mods);
 }
 
 // called when the mouse moves while a button is down:
+// MARK: Mouse Motion
+void MouseMotion(GLFWwindow *window, double xpos, double ypos) {
+  ImGuiIO &io = ImGui::GetIO();
+  if (io.WantCaptureMouse)
+    return;
 
-void MouseMotionPassive(int x, int y) {
-  ImGui_ImplGLUT_MotionFunc(x, y);
-}
+  if (xpos < 0 || ypos < 0 || xpos > io.DisplaySize.x || ypos > io.DisplaySize.y)
+    return;
 
-void MouseMotion(int x, int y) {
-  if (!ImGuiSceneRenderHovered) {
-    ImGui_ImplGLUT_MotionFunc(x, y);
+  // printf("MosueMoved: %f, %f\n", xpos, ypos);
 
-    ImGuiIO &io = ImGui::GetIO();
-    if (io.WantCaptureMouse)
-      return;
-  }
+  int dx = xpos - Xmouse;  // change in mouse coords
+  int dy = ypos - Ymouse;
 
-  int dx = x - Xmouse;  // change in mouse coords
-  int dy = y - Ymouse;
-
-  if ((ActiveButton & LEFT) != 0) {
+  if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
     Xrot += (ANGFACT * dy);
     Yrot += (ANGFACT * dx);
   }
 
-  if ((ActiveButton & MIDDLE) != 0) {
+  if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS) {
     Scale += SCLFACT * (float)(dx - dy);
 
     // keep object from turning inside-out or disappearing:
@@ -866,36 +744,34 @@ void MouseMotion(int x, int y) {
       Scale = MINSCALE;
   }
 
-  Xmouse = x;  // new current position
-  Ymouse = y;
+  Xmouse = xpos;  // new current position
+  Ymouse = ypos;
+}
 
-  glutSetWindow(MainWindow);
-  glutPostRedisplay();
+void MouseWheel(GLFWwindow *window, double xoffset, double yoffset) {
+  ImGuiIO &io = ImGui::GetIO();
+  if (io.WantCaptureMouse)
+    return;
+
+  Scale += yoffset * SCLFACT * SCROLL_WHEEL_CLICK_FACTOR;
+
+  // keep object from turning inside-out or disappearing:
+  if (Scale < MINSCALE)
+    Scale = MINSCALE;
 }
 
 // called when user resizes the window:
-
-void Resize(int width, int height) {
+// MARK: Resize
+void Resize(GLFWwindow *window, int width, int height) {
   // don't really need to do anything since window size is
   // checked each time in Display( ):
-  ImGui_ImplGLUT_ReshapeFunc(width, height);
-
-  glutSetWindow(MainWindow);
-  glutPostRedisplay();
 }
 
 // handle a change to the window's visibility:
-void Visibility(int state) {
-  fprintf(stderr, "Visibility: %d\n", state);
-
-  if (state == GLUT_VISIBLE) {
-    glutSetWindow(MainWindow);
-    glutPostRedisplay();
-  } else {
-    // could optimize by keeping track of the fact
-    // that the window is not visible and avoid
-    // animating or redrawing it ...
-  }
+// MARK: Visibility
+void Visibility(GLFWwindow *window, int state) {
+  printf("Visibility: %i\n", state);
+  WindowVisible = state == GLFW_TRUE;
 }
 
 ///////////////////////////////////////   HANDY UTILITIES:  //////////////////////////

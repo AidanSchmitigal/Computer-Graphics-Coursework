@@ -2,6 +2,8 @@
 
 namespace LightsEditor {
 
+extern bool viewLightsPanel;
+
 extern float clearColor[4];
 
 void ShowLightsPanel();

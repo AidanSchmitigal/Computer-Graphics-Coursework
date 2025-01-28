@@ -16,6 +16,8 @@
 
 namespace LightsEditor {
 
+bool viewLightsPanel = true;
+
 // Define a struct for lights
 struct Light {
   float position[3] = {0.0f, 0.0f, 0.0f};
@@ -32,6 +34,8 @@ float ambientLight[4] = {0.3f, 0.3f, 0.3f, 1.f};
 float clearColor[4] = {0.45f, 0.55f, 0.60f, 1.00f};
 
 void ShowLightsPanel() {
+  if (!viewLightsPanel) return;
+
   ImGui::Begin("Lights Panel");
 
   ImGui::ColorEdit3("Clear Color", clearColor);
