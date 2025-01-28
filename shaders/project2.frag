@@ -7,6 +7,7 @@ uniform float uShininess;    // specular exponent
 // animations or by keyboard hits:
 uniform float uAd, uBd;
 uniform float uTol;
+uniform sampler2D uNoise2;
 uniform sampler3D uNoise3;
 uniform float uNoiseAmp;
 uniform float uNoiseFreq;
@@ -30,15 +31,23 @@ void main() {
   vec3 myColor = OBJECTCOLOR;
   vec2 st = vST;
 
-  vec4 nv = texture(uNoise3, uNoiseFreq * vMC);
+  // // float nv = texture3D(uNoise3, uNoiseFreq * vMC);
+  // vec4 nv = texture3D(uNoise3, uNoiseFreq * vec3(vST, 0.));
+  // // gl_FragColor = vec4(texture3D(uNoise3, vec3(5., 5., 0.)).xyz, 1.);
+  // gl_FragColor = vec4(nv.xyz * 100., 1.);
+  // return;
+
+  vec4 nv = (texture2D(uNoise2, st * uNoiseFreq) - 0.5) * uNoiseAmp;
 
   // blend OBJECTCOLOR and ELLIPSECOLOR by using the ellipse equation to decide
   // how close 	this fragment is to the ellipse border:
 
   // (s-sc)^2 / Ar^2 + (t-tc)^2 / Br^2 = 1
 
-  float sc = fract(st.s / uAd);
-  float tc = fract(st.t / uBd);
+  float sc = fract((st.s + nv.r) / uAd);
+  float tc = fract((st.t + nv.r) / uBd);
+  // float sc = fract(nv.s / uAd);
+  // float tc = fract(nv.t / uBd);
 
   float Ar = 0.5;
   float Br = 0.5;

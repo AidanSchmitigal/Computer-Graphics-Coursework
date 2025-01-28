@@ -1,3 +1,4 @@
 
-ERROR: 0:33: Invalid call of undeclared identifier 'texture'
+ERROR: 0:35: Use of undeclared identifier 'uNoise3'
+ERROR: 0:37: Use of undeclared identifier 'nv'
 

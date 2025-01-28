@@ -22,6 +22,7 @@
 #endif
 
 #include "utils/simplex.h"
+#include "utils/textures.h"
 
 namespace ShaderEditor {
 
@@ -41,10 +42,10 @@ void InitializeUniform(Uniform& uniform);
 GLuint noise3dTexture;
 GLuint noise2dTexture;
 
-GLuint* textures2D = {&noise2dTexture};
-const char* textures2DNames[] = {"noise2d"};
-GLuint* textures3D = {&noise3dTexture};
-const char* textures3DNames[] = {"noise3d"};
+const std::array<GLuint*, 1> textures2D = {&noise2dTexture};
+const std::array<const char*, 1> textures2DNames = {"noise2d"};
+const std::array<GLuint*, 1> textures3D = {&noise3dTexture};
+const std::array<const char*, 1> textures3DNames = {"noise3d"};
 
 // MARK: findShaders
 void findShaders() {
@@ -408,9 +409,9 @@ void ShowShaderPropertiesPanel() {
         //   ImGui::EndCombo();
         // }
       } else if (uniform.type == GL_SAMPLER_2D) {
-        auto& v = std::get<GLuint>(uniform.value);
+        auto& v = std::get<uint>(uniform.value);
         if (ImGui::BeginCombo(uniform.name.c_str(), textures2DNames[v])) {
-          for (int i = 0; i < 2; i++) {
+          for (int i = 0; i < textures2DNames.size(); i++) {
             if (ImGui::Selectable(textures2DNames[i], v == i)) {
               v = i;
             }
@@ -418,9 +419,9 @@ void ShowShaderPropertiesPanel() {
           ImGui::EndCombo();
         }
       } else if (uniform.type == GL_SAMPLER_3D) {
-        auto& v = std::get<GLuint>(uniform.value);
+        auto& v = std::get<uint>(uniform.value);
         if (ImGui::BeginCombo(uniform.name.c_str(), textures3DNames[v])) {
-          for (int i = 0; i < 2; i++) {
+          for (int i = 0; i < textures3DNames.size(); i++) {
             if (ImGui::Selectable(textures3DNames[i], v == i)) {
               v = i;
             }
@@ -430,9 +431,9 @@ void ShowShaderPropertiesPanel() {
       }
       ImGui::Separator();
       ImGui::PopID();
-
-      ImGui::End();
     }
+
+    ImGui::End();
   }
 }
 
@@ -539,14 +540,14 @@ void useSelectedShader() {
       auto& v = std::get<glm::mat4x2>(uniform.value);
       shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), glm::value_ptr(v));
     } else if (uniform.type == GL_SAMPLER_1D) {
-      auto& v = std::get<GLuint>(uniform.value);
+      auto& v = std::get<uint>(uniform.value);
       // shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), v);
     } else if (uniform.type == GL_SAMPLER_2D) {
-      auto& v = std::get<GLuint>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), v);
+      auto& v = std::get<uint>(uniform.value);
+      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), 0);  // TODO: Check if this number is correct
     } else if (uniform.type == GL_SAMPLER_3D) {
-      auto& v = std::get<GLuint>(uniform.value);
-      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), v);
+      auto& v = std::get<uint>(uniform.value);
+      shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), 1);
     } else if (uniform.type == GL_SAMPLER_CUBE) {
       // auto& v = std::get<GLuint>(uniform.value);
       // shaders[selectedIndex]->program.SetUniformVariable((char*)uniform.name.c_str(), v);
@@ -714,10 +715,10 @@ void InitializeUniform(Uniform& uniform) {
     case GL_SAMPLER_1D:
       break;
     case GL_SAMPLER_2D:
-      uniform.value = noise2dTexture;
+      uniform.value = (uint)0;
       break;
     case GL_SAMPLER_3D:
-      uniform.value = noise3dTexture;
+      uniform.value = (uint)0;
       break;
     case GL_SAMPLER_CUBE:
       break;
@@ -740,7 +741,6 @@ void InitTextures() {
   const char* noise3d_path = "textures/noise3d.raw";
   const char* noise2d_path = "textures/noise2d.raw";
 
-  // 3D Noise Texture
   float* noise3d = new float[size * size * size];  // Changed to float for OpenGL compatibility
 
   // Try to load from file first
@@ -754,11 +754,17 @@ void InitTextures() {
 
   // Generate if not loaded
   if (!loaded) {
-    for (int i = 0; i < size * size * size; i++) {
-      noise3d[i] = noise_eval3d(i % size, i / size, i / (size * size));
+    for (int z = 0; z < size; z++) {
+      for (int y = 0; y < size; y++) {
+        for (int x = 0; x < size; x++) {
+          int idx = x + y * size + z * size * size;
+          // double val = noise_eval3d(static_cast<double>(x) / static_cast<double>(size), static_cast<double>(y) / static_cast<double>(size), static_cast<double>(z) / static_cast<double>(size));
+          double randomValue = static_cast<double>(rand()) / static_cast<double>(RAND_MAX);
+          noise3d[idx] = (float)((randomValue + 1.0) * 0.5);
+        }
+      }
     }
 
-    // Save to file for next time
     if (FILE* f = fopen(noise3d_path, "wb")) {
       fwrite(noise3d, sizeof(float), size * size * size, f);
       fclose(f);
@@ -774,8 +780,12 @@ void InitTextures() {
   glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
 
-  // Changed format to single channel float
   glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, size, size, size, 0, GL_RED, GL_FLOAT, noise3d);
+
+  GLenum err = glGetError();
+  if (err != GL_NO_ERROR) {
+    printf("GL Error after texture creation: %d\n", err);
+  }
 
   printf("Created 3D noise texture with size %d, and id %d\n", size, noise3dTexture);
   delete[] noise3d;
@@ -783,7 +793,6 @@ void InitTextures() {
   // 2D Noise Texture
   float* noise2d = new float[size * size];
 
-  // Try to load from file first
   loaded = false;
   if (FILE* f = fopen(noise2d_path, "rb")) {
     size_t read = fread(noise2d, sizeof(float), size * size, f);
@@ -794,11 +803,15 @@ void InitTextures() {
 
   // Generate if not loaded
   if (!loaded) {
-    for (int i = 0; i < size * size; i++) {
-      noise2d[i] = noise_eval2d(i % size, i / size);
+    for (int y = 0; y < size; y++) {
+      for (int x = 0; x < size; x++) {
+        int idx = x + y * size;
+        // double val = noise_eval2d(static_cast<double>(x) / 10.0, static_cast<double>(y) / 10.0);
+        double randomValue = static_cast<double>(rand()) / static_cast<double>(RAND_MAX);
+        noise2d[idx] = (float)((randomValue + 1.0) * 0.5);
+      }
     }
 
-    // Save to file for next time
     if (FILE* f = fopen(noise2d_path, "wb")) {
       fwrite(noise2d, sizeof(float), size * size, f);
       fclose(f);
@@ -813,11 +826,20 @@ void InitTextures() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-  // Changed format to single channel float
   glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, size, size, 0, GL_RED, GL_FLOAT, noise2d);
+
+  err = glGetError();
+  if (err != GL_NO_ERROR) {
+    printf("GL Error after texture creation: %d\n", err);
+  }
 
   printf("Created 2D noise texture with size %d, and id %d\n", size, noise2dTexture);
   delete[] noise2d;
+
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_3D, noise3dTexture);
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, noise2dTexture);
 }
 
 }  // namespace ShaderEditor
