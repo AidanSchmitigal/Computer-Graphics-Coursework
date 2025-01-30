@@ -5,6 +5,7 @@ uniform float uShininess;    // specular exponent
 
 // in Project #1, these have to be set dynamically from glman sliders or keytime
 // animations or by keyboard hits:
+uniform bool toggle;
 uniform float uAd, uBd;
 uniform float uTol;
 uniform sampler2D uNoise2;
@@ -31,6 +32,13 @@ void main() {
   vec3 myColor = OBJECTCOLOR;
   vec2 st = vST;
 
+  if (toggle == true) {
+    gl_FragColor = vec4(1., 0., 0., 1.);
+  } else {
+    gl_FragColor = vec4(0., 0., 1., 1.);
+  }
+  // return;
+
   // // float nv = texture3D(uNoise3, uNoiseFreq * vMC);
   // vec4 nv = texture3D(uNoise3, uNoiseFreq * vec3(vST, 0.));
   // // gl_FragColor = vec4(texture3D(uNoise3, vec3(5., 5., 0.)).xyz, 1.);
@@ -44,8 +52,8 @@ void main() {
   // vec4 nv = texture3D(uNoise3, vec3(st * uNoiseFreq, 0.)) * uNoiseAmp;
   vec4 nv = texture2D(uNoise2, st * uNoiseFreq) * uNoiseAmp;
   // gl_FragColor = vec4(nv.xyz * 100., 1.);
-  gl_FragColor = vec4(st.st, 0., 1.);
-  return;
+  // gl_FragColor = vec4(st.st, 0., 1.);
+  // return;
 
   // blend OBJECTCOLOR and ELLIPSECOLOR by using the ellipse equation to decide
   // how close 	this fragment is to the ellipse border:

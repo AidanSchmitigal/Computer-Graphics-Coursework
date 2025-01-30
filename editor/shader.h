@@ -26,6 +26,7 @@ void InitTextures();
 void RegisterImGuiSettingsHandler();
 
 struct Shader {
+  int id;
   char name[256];
   std::vector<std::string> files;
   std::vector<Uniform> uniforms;
@@ -38,9 +39,10 @@ struct Shader {
     // files.clear();
     // uniforms.clear();
   }
+
+  void use();
 };
 
-void useSelectedShader();
 void checkShaderFiles();
 
 }  // namespace ShaderEditor

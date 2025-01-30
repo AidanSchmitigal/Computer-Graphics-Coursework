@@ -2,7 +2,23 @@
 
 #include <stdio.h>
 
+#define STB_IMAGE_IMPLEMENTATION
 #include "bmptotexture.h"
+#include "utils/stb_image.h"
+
+GLFWimage loadImage(const char *filename) {
+  GLFWimage image;
+  int channels;
+
+  image.pixels = stbi_load(filename, &image.width, &image.height, &channels, 4);
+
+  if (!image.pixels) {
+    fprintf(stderr, "Failed to load image '%s'\n", filename);
+    return image;
+  }
+
+  return image;
+}
 
 unsigned char *ReadTexture3D(const char *filename, int *width, int *height, int *depth) {
   FILE *fp = fopen(filename, "rb");

@@ -13,6 +13,7 @@
 #define F_PI_2 ((float)(F_PI / 2.f))
 #endif
 
+#include "ImGuizmo.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -35,6 +36,7 @@
 #include "editor/console.h"
 #include "editor/debug.h"
 #include "editor/lightswindow.h"
+#include "editor/objects.h"
 #include "editor/shader.h"
 #include "editor/style.h"
 #include "glm/gtc/matrix_inverse.hpp"
@@ -44,12 +46,12 @@
 #include "glm/mat4x4.hpp"
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
-#include "objects/objects.h"
 #include "utils/arraymath.h"
 #include "utils/bmptotexture.h"
 #include "utils/colors.h"
 #include "utils/glslprogram.h"
 #include "utils/keytime.h"
+#include "utils/texture.h"
 // #include "setmaterial.cpp"
 // #include "setlight.cpp"
 // #include "osucone.cpp"
@@ -123,7 +125,6 @@ float SceneTime = 0.0;      // used for animation, # of seconds elapsed
 float DeltaTime = 0.0;      // used for animation, # of seconds since last frame
 float Xrot = 20, Yrot = 0;  // rotation angles in degrees
 
-int SphereList;
 bool ImGuiSceneRenderHovered = true;
 float scene_window_width = INIT_WINDOW_WIDTH;
 float scene_window_height = INIT_WINDOW_HEIGHT;
@@ -236,9 +237,9 @@ void Animate() {
 
 // MARK: DisplayImGui
 void DisplayImGui() {
-  ImGui_ImplOpenGL3_NewFrame();
-  ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
+
+  ImGuizmo::BeginFrame();
 
   ImGuiIO &io = ImGui::GetIO();
 
@@ -284,6 +285,7 @@ void DisplayImGui() {
     }
     if (ImGui::BeginMenu("View")) {
       ImGui::MenuItem("Asset Browser", nullptr, &Assets::viewAssetBrowser);
+      ImGui::MenuItem("Objects", nullptr, &Objects::viewObjectsPanel);
       ImGui::MenuItem("Lights Editor", nullptr, &LightsEditor::viewLightsPanel);
       ImGui::MenuItem("Console", nullptr, &ConsoleWindow::viewConsolePanel);
       ImGui::MenuItem("Debug", nullptr, &Debug::viewDebugPanel);
@@ -311,6 +313,7 @@ void DisplayImGui() {
   LightsEditor::ShowLightsPanel();
   ConsoleWindow::ShowConsolePanel();
   Assets::ShowExampleAppAssetsBrowser();
+  Objects::ShowObjectsPanel();
   ShaderEditor::ShowShaderListPanel();
   ShaderEditor::ShowShaderEditorPanel();
   ShaderEditor::ShowShaderPropertiesPanel();
@@ -318,17 +321,18 @@ void DisplayImGui() {
   if (Debug::viewDebugPanel && ImGui::Begin("Debug")) {
     ImGui::DragFloat("Scale", &Scale, 0.01f, 0.f, 10.f);
     ImGui::Text("Scene Time: %f", SceneTime);
+
     ImGui::End();
   }
 
   Debug::ShowOverlay();
-
-  // Rendering
-  ImGui::Render();
 }
 // draw the complete scene:
 // MARK: Display
 void Display() {
+  ImGui_ImplOpenGL3_NewFrame();
+  ImGui_ImplGlfw_NewFrame();
+
   DisplayImGui();
 
   // set the viewport to be a square centered in the window:
@@ -404,35 +408,20 @@ void Display() {
   }
 
   // since we are using glScalef( ), be sure the normals get unitized:
-
   glEnable(GL_NORMALIZE);
 
-  // draw the box object by calling up its display list:
+  Objects::DisplayObjects();
 
-  ShaderEditor::useSelectedShader();
+  Pattern.UnUse();
 
-  // glUseProgram(5);
+  // MARK: ImGui Render
+  float cameraView[16];
+  float cameraProjection[16];
 
-  // Pattern.Use();
-
-  // set the uniform variables that will change over time:
-
-  // NowS0 = 0.5f;
-  // NowT0 = 0.5f;
-  // NowD = 0.2f + 0.1f * sinf(2.f * F_PI * SceneTime);
-
-  // TODO:
-  // Pattern.SetUniformVariable((char *)"uAd", fmodf(SceneTime / 3.f, .5f));
-  // Pattern.SetUniformVariable((char *)"uBd", fmodf(SceneTime / 4.f, .5f));
-  // Pattern.SetUniformVariable((char *)"uTol", fmodf(SceneTime / 10.f, 1.f));
-
-  glCallList(SphereList);
-
-  Pattern.UnUse();  // Pattern.Use(0);  also works
-  // glUseProgram(0);
-
-  // Render the ImGUIWindow
-  // ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
+  glGetFloatv(GL_MODELVIEW_MATRIX, cameraView);
+  glGetFloatv(GL_PROJECTION_MATRIX, cameraProjection);
+  Objects::DisplayGizmo(cameraView, cameraProjection);
+  ImGui::Render();
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
   GLFWwindow *backup_current_context = glfwGetCurrentContext();
@@ -510,6 +499,8 @@ void InitGraphics() {
   // Pattern.SetUniformVariable((char *)"uShininess", 12.f);
   // Pattern.UnUse();
 }
+
+// MARK: UserData
 
 static void *UserData_ReadOpen(ImGuiContext *, ImGuiSettingsHandler *, const char *name) {
   return (void *)"Panel Visibility";
@@ -622,11 +613,7 @@ void InitLists() {
   fprintf(stderr, "Starting InitLists.\n");
 
   // create the object:
-
-  SphereList = glGenLists(1);
-  glNewList(SphereList, GL_COMPILE);
-  OsuSphere(1., 64, 64);
-  glEndList();
+  Objects::InitLists();
 
   // create the axes:
 
