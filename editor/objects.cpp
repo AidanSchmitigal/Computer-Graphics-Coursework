@@ -14,13 +14,14 @@ namespace Objects {
 std::vector<std::shared_ptr<Object>> objects;
 int selectedObject = -1;
 
-const char* objectTypesNames[] = {"Cube", "Sphere", "Cylinder", "Cone", "Torus", "Plane"};
+const char* objectTypesNames[] = {"Cube", "Sphere", "Cylinder", "Cone", "Torus", "Plane", "Plane2"};
 const ObjectType objectTypes[] = {ObjectType::Cube,
                                   ObjectType::Sphere,
                                   ObjectType::Cylinder,
                                   ObjectType::Cone,
                                   ObjectType::Torus,
-                                  ObjectType::Plane};
+                                  ObjectType::Plane,
+                                  ObjectType::Plane2};
 
 std::unordered_map<ObjectType, GLuint> objectDisplayLists = {};
 
@@ -67,6 +68,11 @@ void InitLists() {
   newList = objectDisplayLists[ObjectType::Plane] = glGenLists(1);
   glNewList(newList, GL_COMPILE);
   OsuGrid(10.0f, 10.0f);
+  glEndList();
+
+  newList = objectDisplayLists[ObjectType::Plane2] = glGenLists(1);
+  glNewList(newList, GL_COMPILE);
+  OsuGrid2();
   glEndList();
 
   newList = objectDisplayLists[ObjectType::Cube] = glGenLists(1);
@@ -156,6 +162,8 @@ void Object::Display() {
   }
 
   glCallList(objectDisplayLists[type]);
+
+  use_shader->unUse();
   glPopMatrix();
 }
 
@@ -182,9 +190,10 @@ void DisplayGizmo(float* cameraView, float* cameraProjection) {
 
   float windowWidth = (float)ImGui::GetWindowWidth();
   float windowHeight = (float)ImGui::GetWindowHeight();
+  ImVec2 windowPos = ImGui::GetWindowPos();
 
   ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
-  ImGuizmo::SetRect(0, 75, windowWidth, windowHeight);  // ! IDK why 75 is needed
+  ImGuizmo::SetRect(windowPos.x, windowPos.y - 8, windowWidth, windowHeight);  // ! IDK why 75 is needed
 
   // ImGuizmo::DrawGrid(cameraView, cameraProjection, identityMatrix, 100.f);
   // ImGuizmo::DrawCubes(cameraView, cameraProjection, &objectMatrix[0][0], gizmoCount);

@@ -29,6 +29,7 @@ struct Uniform {
   GLint size;
   GLenum type;
   std::string name;
+  bool missing = false;
   std::variant<float, glm::vec2, glm::vec3, glm::vec4, double, int, glm::ivec2, glm::ivec3, glm::ivec4, uint, bool, glm::bvec2, glm::bvec3, glm::bvec4, glm::mat2, glm::mat3, glm::mat4, glm::mat2x3, glm::mat2x4, glm::mat3x2, glm::mat3x4, glm::mat4x2, glm::mat4x3> value;
   // GL_FLOAT:                "float";           float
   // GL_FLOAT_VEC2:           "vec2";            glm::vec2
@@ -60,7 +61,8 @@ struct Uniform {
   // GL_SAMPLER_1D_SHADOW:    "sampler1DShadow"; GLuint
   // GL_SAMPLER_2D_SHADOW:    "sampler2DShadow"; GLuint
 
-  Uniform(GLint size, GLenum type, char* name) : size(size), type(type), name(name) {}
+  Uniform(GLint size, GLenum type, char* name) : size(size), type(type), name(name), missing(false) {}
+  Uniform(GLint size, GLenum type, char* name, bool missing) : size(size), type(type), name(name), missing(missing) {}
 };
 
 std::string GetGLTypeString(GLenum type);

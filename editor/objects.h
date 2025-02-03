@@ -26,6 +26,7 @@ enum class ObjectType { Cube,
                         Cone,
                         Torus,
                         Plane,
+                        Plane2,
                         NUM_OBJECT_TYPES };
 
 struct Object {

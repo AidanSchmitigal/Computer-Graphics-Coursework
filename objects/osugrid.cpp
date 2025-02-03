@@ -26,8 +26,33 @@ void OsuGrid(float x, float z) {
   for (int i = 0; i < x; i++) {
     glBegin(GL_QUAD_STRIP);
     for (int j = 0; j <= z; j++) {
+      glTexCoord2f(DZ * (float)j, DX * (float)(i + 0));
       glVertex3f(DZ * (float)j - .5, 0, DX * (float)(i + 0) - .5);
+      glTexCoord2f(DZ * (float)j, DX * (float)(i + 1));
       glVertex3f(DZ * (float)j - .5, 0, DX * (float)(i + 1) - .5);
+    }
+    glEnd();
+  }
+}
+
+void OsuGrid2() {
+  float xmin = -1.f;
+  float xmax = 1.f;
+  float ymin = -1.f;
+  float ymax = 1.f;
+  float dx = xmax - xmin;
+  float dy = ymax - ymin;
+  float z = 0.f;
+  int numy = 128;  // set this to what you want it to be
+  int numx = 128;  // set this to what you want it to be
+  for (int iy = 0; iy < numy; iy++) {
+    glBegin(GL_QUAD_STRIP);
+    glNormal3f(0., 0., 1.);
+    for (int ix = 0; ix <= numx; ix++) {
+      glTexCoord2f((float)ix / (float)numx, (float)(iy + 0) / (float)numy);
+      glVertex3f(xmin + dx * (float)ix / (float)numx, ymin + dy * (float)(iy + 0) / (float)numy, z);
+      glTexCoord2f((float)ix / (float)numx, (float)(iy + 1) / (float)numy);
+      glVertex3f(xmin + dx * (float)ix / (float)numx, ymin + dy * (float)(iy + 1) / (float)numy, z);
     }
     glEnd();
   }

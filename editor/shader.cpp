@@ -152,6 +152,10 @@ void compileShaderProgram(std::shared_ptr<Shader>& shader) {
   glGetProgramiv(shader->program.GetProgram(), GL_ACTIVE_UNIFORM_MAX_LENGTH, &bufsize);
   char* lname = new char[bufsize + 1];
 
+  for (auto uniform : shader->uniforms) {
+    uniform.missing = true;
+  }
+
   for (int i = 0; i < numactiveuniforms; i++) {
     GLint lsize;
     GLenum ltype;
@@ -170,9 +174,10 @@ void compileShaderProgram(std::shared_ptr<Shader>& shader) {
       // shader->uniforms.emplace_back(lsize, ltype, lname);
 
       // Place in front if starts with "gl_"  or place back if not
-      shader->uniforms.emplace_back(lsize, ltype, lname);
-
+      shader->uniforms.emplace_back(lsize, ltype, lname, false);
       InitializeUniform(shader->uniforms.back());
+    } else {
+      existingUniform->missing = false;
     }
   }
   delete[] lname;
@@ -337,6 +342,12 @@ void ShowShaderPropertiesPanel() {
   ImGui::Text("Uniforms");
   for (size_t i = 0; i < shader->uniforms.size(); i++) {
     auto& uniform = shader->uniforms[i];
+
+    if (uniform.missing) {
+      ImGui::Text("Missing uniform: %s", uniform.name.c_str());
+      continue;
+    }
+
     ImGui::Text("Name: %s", uniform.name.c_str());
     ImGui::Text("Type: %s", GetGLTypeString(uniform.type).c_str());
 
@@ -503,6 +514,10 @@ void Shader::use() {
     auto& uniform = uniforms[i];
     SetShaderUniform(uniform, program);
   }
+}
+
+void Shader::unUse() {
+  program.UnUse();
 }
 
 // void useSelectedShader() {

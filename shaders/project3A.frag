@@ -24,56 +24,15 @@ varying vec3 vMC; // model coordinates
 //	Leave out the #version line, or use 120
 //	Change the "in" to "varying"
 
-const vec3 OBJECTCOLOR = vec3(1.0, 1.0, 1.0);  // color to make the object
-const vec3 ELLIPSECOLOR = vec3(1.0, 0.0, 1.0); // color to make the ellipse
+uniform vec3 OBJECTCOLOR; // = vec3(1.0, 1.0, 1.0);  // color to make the object
 const vec3 SPECULARCOLOR = vec3(1., 1., 1.);
 
 void main() {
   vec3 myColor = OBJECTCOLOR;
   vec2 st = vST;
 
-  if (toggle == true) {
-    gl_FragColor = vec4(1., 0., 0., 1.);
-  } else {
-    gl_FragColor = vec4(0., 0., 1., 1.);
-  }
-  // return;
-
-  // // float nv = texture3D(uNoise3, uNoiseFreq * vMC);
-  // vec4 nv = texture3D(uNoise3, uNoiseFreq * vec3(vST, 0.));
-  // // gl_FragColor = vec4(texture3D(uNoise3, vec3(5., 5., 0.)).xyz, 1.);
-  // gl_FragColor = vec4(nv.xyz * 100., 1.);
-  // return;
-
-  // UNSUPPORTED (log once): POSSIBLE ISSUE: unit 0 GLD_TEXTURE_INDEX_2D is
-  // unloadable and bound to sampler type (Float) - using zero texture because
-  // texture unloadable
-
-  // vec4 nv = texture3D(uNoise3, vec3(st * uNoiseFreq, 0.)) * uNoiseAmp;
-  vec4 nv = texture2D(uNoise2, st * uNoiseFreq) * uNoiseAmp;
-  // gl_FragColor = vec4(nv.xyz * 100., 1.);
-  // gl_FragColor = vec4(st.st, 0., 1.);
-  // return;
-
-  // blend OBJECTCOLOR and ELLIPSECOLOR by using the ellipse equation to decide
-  // how close 	this fragment is to the ellipse border:
-
-  // (s-sc)^2 / Ar^2 + (t-tc)^2 / Br^2 = 1
-
-  float sc = fract((st.s + nv.r) / uAd);
-  float tc = fract((st.t + nv.r) / uBd);
-  // float sc = fract(nv.s / uAd);
-  // float tc = fract(nv.t / uBd);
-
-  float Ar = 0.5;
-  float Br = 0.5;
-  float circleDist =
-      (sc - 0.5) * (sc - 0.5) / (Ar * Ar) + (tc - 0.5) * (tc - 0.5) / (Br * Br);
-
-  float t = smoothstep(1. - uTol, 1. + uTol, circleDist);
-  myColor = mix(ELLIPSECOLOR, OBJECTCOLOR, t);
-
   // now use myColor in the per-fragment lighting equations:
+  myColor = vec3(st, 0.);
 
   vec3 Normal = normalize(vN);
   vec3 Light = normalize(vL);

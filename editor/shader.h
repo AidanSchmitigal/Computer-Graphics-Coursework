@@ -41,6 +41,7 @@ struct Shader {
   }
 
   void use();
+  void unUse();
 };
 
 void checkShaderFiles();
