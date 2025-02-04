@@ -318,6 +318,8 @@ void ShowShaderEditorPanel() {
 
 // MARK: Properties Panel
 void ShowShaderPropertiesPanel() {
+  if (!viewShaderPropertiesPanel) return;
+
   auto selectedObject = Objects::getSelectedObject();
   auto object = selectedObject.lock();
   auto shader = object ? object->shader.lock() : nullptr;

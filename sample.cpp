@@ -13,11 +13,12 @@
 #define F_PI_2 ((float)(F_PI / 2.f))
 #endif
 
-#include "ImGuizmo.h"
+#include "editor/PieMenu.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_internal.h"
+#include "imguizmo.h"
 
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
@@ -291,7 +292,8 @@ void DisplayImGui() {
       ImGui::MenuItem("Console", nullptr, &ConsoleWindow::viewConsolePanel);
       ImGui::MenuItem("Debug", nullptr, &Debug::viewDebugPanel);
       ImGui::MenuItem("ImGui Demo", nullptr, &Debug::viewDemoWindow);
-      ImGui::MenuItem("Shader Editor", nullptr, &ShaderEditor::viewShaderListPanel);
+      ImGui::MenuItem("Shaders List", nullptr, &ShaderEditor::viewShaderListPanel);
+      ImGui::MenuItem("Shader Properties", nullptr, &ShaderEditor::viewShaderPropertiesPanel);
       ImGui::MenuItem("Overlay", nullptr, &Debug::viewOverlay);
       ImGui::EndMenu();
     }
@@ -304,6 +306,45 @@ void DisplayImGui() {
     }
 
     ImGui::EndMainMenuBar();
+  }
+
+  const bool should_open_popup =
+      (ImGui::IsKeyDown(ImGuiKey_GraveAccent) ||
+       ImGui::IsMouseDown(ImGuiMouseButton_Right));
+
+  {
+    if (!ImGui::IsAnyItemHovered() && should_open_popup) {
+      ImGui::OpenPopup("PieMenu");
+    }
+
+    if (BeginPiePopup("PieMenu", 1)) {
+      if (PieMenuItem("Front")) {
+        Xrot = 0.f;
+        Yrot = 0.f;
+      }
+      if (PieMenuItem("Back")) {
+        Xrot = 0.f;
+        Yrot = -180.f;
+      }
+      if (PieMenuItem("Left")) {
+        Xrot = 0.f;
+        Yrot = 90.f;
+      }
+      if (PieMenuItem("Right")) {
+        Xrot = 0.f;
+        Yrot = -90.f;
+      }
+      if (PieMenuItem("Top")) {
+        Xrot = 90.f;
+        Yrot = 0.f;
+      }
+      if (PieMenuItem("Bottom")) {
+        Xrot = -90.f;
+        Yrot = 0.f;
+      }
+
+      EndPiePopup();
+    }
   }
 
   ImGui::End();
@@ -327,6 +368,14 @@ void DisplayImGui() {
   }
 
   Debug::ShowOverlay();
+
+  if (Debug::viewOverlay && ImGui::Begin("Stats Overlay")) {
+    ImGui::Text("Scene Time: %f", SceneTime);
+    ImGui::Text("Camera Position: %f, %f, %f", CameraTranslation[0], CameraTranslation[1], CameraTranslation[2]);
+    ImGui::Text("Camera Rotation: %f, %f", Xrot, Yrot);
+    ImGui::End();
+  }
+  // View popup
 }
 // draw the complete scene:
 // MARK: Display
@@ -381,13 +430,6 @@ void Display() {
   // set the eye position, look-at position, and up-vector:
 
   gluLookAt(0.f, 0.f, 3.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f);
-
-  // Draw center of the scene
-  glPushMatrix();
-  glColor3f(1.f, 1.f, 1.f);
-  glScalef(0.1f, 0.1f, 0.1f);
-  glCallList(Objects::objectDisplayLists[Objects::ObjectType::Sphere]);
-  glPopMatrix();
 
   // rotate the scene:
 
