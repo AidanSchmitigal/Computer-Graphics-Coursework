@@ -124,6 +124,7 @@ float Scale = 0.3;          // scaling factor
 float SceneTime = 0.0;      // used for animation, # of seconds elapsed
 float DeltaTime = 0.0;      // used for animation, # of seconds since last frame
 float Xrot = 20, Yrot = 0;  // rotation angles in degrees
+glm::vec3 CameraTranslation = glm::vec3(0.f, 0.f, 0.f);
 
 bool ImGuiSceneRenderHovered = true;
 float scene_window_width = INIT_WINDOW_WIDTH;
@@ -381,6 +382,13 @@ void Display() {
 
   gluLookAt(0.f, 0.f, 3.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f);
 
+  // Draw center of the scene
+  glPushMatrix();
+  glColor3f(1.f, 1.f, 1.f);
+  glScalef(0.1f, 0.1f, 0.1f);
+  glCallList(Objects::objectDisplayLists[Objects::ObjectType::Sphere]);
+  glPopMatrix();
+
   // rotate the scene:
 
   glRotatef((GLfloat)Yrot, 0.f, 1.f, 0.f);
@@ -395,10 +403,12 @@ void Display() {
   glRotatef((GLfloat)Xrot, xRotDir[0], xRotDir[1], xRotDir[2]);
 
   // uniformly scale the scene:
-
   if (Scale < MINSCALE)
     Scale = MINSCALE;
   glScalef((GLfloat)Scale, (GLfloat)Scale, (GLfloat)Scale);
+
+  // Translate the camera
+  glTranslatef(CameraTranslation[0], CameraTranslation[1], CameraTranslation[2]);
 
   // possibly draw the axes:
 
@@ -693,8 +703,30 @@ void MouseMotion(GLFWwindow *window, double xpos, double ypos) {
   int dy = ypos - Ymouse;
 
   if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-    Xrot += (ANGFACT * dy);
-    Yrot += (ANGFACT * dx);
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+      // Translate the camera
+
+      // Current transformation matrix
+      glm::mat4 currentMatrix = glm::mat4(1.f);
+      currentMatrix = glm::translate(currentMatrix, glm::vec3(CameraTranslation.x, 0.f, 0.f));
+      currentMatrix = glm::scale(currentMatrix, glm::vec3(Scale, Scale, Scale));
+      currentMatrix = glm::rotate(currentMatrix, glm::radians(Yrot), glm::vec3(0.f, 1.f, 0.f));
+
+      glm::vec3 upDir = glm::vec3(0.f, 1.f, 0.f);
+      glm::vec3 lookDir = glm::vec3(cos((Yrot + 90.f) * F_PI / 180.f), 0, sin((Yrot + 90.f) * F_PI / 180.f));
+      glm::vec3 xRotDir = glm::cross(upDir, lookDir);
+
+      currentMatrix = glm::rotate(currentMatrix, glm::radians(Xrot), xRotDir);
+
+      glm::vec3 screenspace_translation = glm::vec3(dx, -dy, 0.f);
+      glm::vec4 worldspace_translation = glm::inverse(currentMatrix) * glm::vec4(screenspace_translation, 0.f);
+      glm::vec3 worldspace_translation_vec3 = glm::vec3(worldspace_translation);
+      CameraTranslation += worldspace_translation_vec3 / 1000.f;
+    } else {
+      // Rotate the camera
+      Xrot += (ANGFACT * dy);
+      Yrot += (ANGFACT * dx);
+    }
   }
 
   if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS) {

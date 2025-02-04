@@ -29,6 +29,8 @@ enum class ObjectType { Cube,
                         Plane2,
                         NUM_OBJECT_TYPES };
 
+extern std::unordered_map<ObjectType, GLuint> objectDisplayLists;
+
 struct Object {
   std::string name;
   glm::mat4 transform;
