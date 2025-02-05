@@ -1,6 +1,11 @@
 uniform float uRipplePeriod;
 uniform float uRippleAmp;
 
+uniform float uTime;
+uniform float uTimeDelta;
+uniform float uTimeLoop;
+uniform float uTimeLoop10;
+
 // will be interpolated into the fragment shader:
 varying vec2 vST; // texture coords
 varying vec3 vN;  // normal vector
@@ -28,13 +33,15 @@ void main() {
   float Y0 = 1.;                     // y value of the center of the ripple
   float pi = 3.14159265358979323846; // pi
   vec4 new_position =
-      gl_Vertex + vec4(0.0, 0.0,
-                       sin(2. * pi * (vST.x * 2. - 1.) / uRipplePeriod) *
-                           uRippleAmp * (1. - vST.y),
-                       0.0);
+      gl_Vertex +
+      vec4(0.0, 0.0,
+           sin(2. * pi * (vST.x * 2. - 1.) / uRipplePeriod + uTime * 10.) *
+               uRippleAmp * (1. - vST.y),
+           0.0);
   float dzdx = uRippleAmp * (Y0 - new_position.y) * (2. * pi / uRipplePeriod) *
-               cos(2. * pi * new_position.x / uRipplePeriod);
-  float dzdy = -uRippleAmp * sin(2. * pi * new_position.x / uRipplePeriod);
+               cos(2. * pi * new_position.x / uRipplePeriod + uTime * 10.);
+  float dzdy =
+      -uRippleAmp * sin(2. * pi * new_position.x / uRipplePeriod + uTime * 10.);
 
   vec3 Tx = vec3(1., 0., dzdx);
   vec3 Ty = vec3(0., 1., dzdy);

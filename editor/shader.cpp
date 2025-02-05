@@ -40,9 +40,6 @@ bool viewShaderPropertiesPanel = true;
 
 void compileShaderProgram(std::shared_ptr<Shader>& shader);
 
-GLuint noise3dTexture;
-GLuint noise2dTexture;
-
 // const std::array<GLuint*, 1> textures2D = {&noise2dTexture};
 const std::array<const char*, 1> textures2DNames = {"noise2d"};
 // const std::array<GLuint*, 1> textures3D = {&noise3dTexture};
@@ -530,32 +527,6 @@ void Shader::unUse() {
 // MARK: Register ImGui Settings Handler
 void RegisterImGuiSettingsHandler() {
   findShaders();
-}
-
-// MARK: texture_setup
-void InitTextures() {
-  printf("Initializing noise textures\n");
-  int size = 256;
-  const char* noise3d_path = "textures/noise3d.064.raw";
-  const char* noise2d_path = "textures/noise2d.064.raw";
-
-  bool loaded = loadTexture3D(noise3d_path, GL_TEXTURE0, &noise3dTexture, &size, &size, &size);
-
-  if (!loaded) {
-    fprintf(stderr, "Could not load 3D noise texture from file\n");
-    return;
-  }
-
-  printf("Created 3D noise texture with size %d, and id %d\n", size, noise3dTexture);
-
-  loaded = loadTexture2D(noise2d_path, GL_TEXTURE1, &noise2dTexture, &size, &size);
-
-  if (!loaded) {
-    fprintf(stderr, "Could not load 2D noise texture from file\n");
-    return;
-  }
-
-  printf("Created 2D noise texture with size %d, and id %d\n", size, noise2dTexture);
 }
 
 }  // namespace ShaderEditor

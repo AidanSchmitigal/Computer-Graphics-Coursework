@@ -38,6 +38,7 @@
 #include "editor/debug.h"
 #include "editor/lightswindow.h"
 #include "editor/objects.h"
+#include "editor/scene.h"
 #include "editor/shader.h"
 #include "editor/style.h"
 #include "glm/gtc/matrix_inverse.hpp"
@@ -122,8 +123,6 @@ GLuint AxesList;            // list to hold the axes
 GLFWwindow *MainWindow;     // window id for main graphics window
 bool WindowVisible = true;  // is the window visible?
 float Scale = 0.3;          // scaling factor
-float SceneTime = 0.0;      // used for animation, # of seconds elapsed
-float DeltaTime = 0.0;      // used for animation, # of seconds since last frame
 float Xrot = 20, Yrot = 0;  // rotation angles in degrees
 glm::vec3 CameraTranslation = glm::vec3(0.f, 0.f, 0.f);
 
@@ -229,11 +228,11 @@ void ExitProgram() {
 double previousTime = 0;
 void Animate() {
   double currentTime = glfwGetTime();
-  DeltaTime = currentTime - previousTime;
+  Scene::DeltaTime = currentTime - previousTime;
   previousTime = currentTime;
 
   if (Debug::freezeTime == false) {
-    SceneTime += DeltaTime;
+    Scene::Time += Scene::DeltaTime;
   }
 }
 
@@ -362,7 +361,7 @@ void DisplayImGui() {
   Debug::ShowDebugPanel();
   if (Debug::viewDebugPanel && ImGui::Begin("Debug")) {
     ImGui::DragFloat("Scale", &Scale, 0.01f, 0.f, 10.f);
-    ImGui::Text("Scene Time: %f", SceneTime);
+    ImGui::Text("Scene Time: %f", Scene::Time);
 
     ImGui::End();
   }
@@ -370,7 +369,7 @@ void DisplayImGui() {
   Debug::ShowOverlay();
 
   if (Debug::viewOverlay && ImGui::Begin("Stats Overlay")) {
-    ImGui::Text("Scene Time: %f", SceneTime);
+    ImGui::Text("Scene Time: %f", Scene::Time);
     ImGui::Text("Camera Position: %f, %f, %f", CameraTranslation[0], CameraTranslation[1], CameraTranslation[2]);
     ImGui::Text("Camera Rotation: %f, %f", Xrot, Yrot);
     ImGui::End();
@@ -530,7 +529,7 @@ void InitGraphics() {
   glfwSetScrollCallback(MainWindow, MouseWheel);
   glfwSetWindowFocusCallback(MainWindow, Visibility);
 
-  ShaderEditor::InitTextures();
+  Textures::InitTextures();
 
   // TODO: Find a better spot of Program loading
   // Pattern.Init();

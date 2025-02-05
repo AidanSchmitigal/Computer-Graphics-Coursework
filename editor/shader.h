@@ -22,7 +22,6 @@ extern bool viewShaderPropertiesPanel;
 void ShowShaderListPanel();
 void ShowShaderEditorPanel();
 void ShowShaderPropertiesPanel();
-void InitTextures();
 void RegisterImGuiSettingsHandler();
 
 struct Shader {

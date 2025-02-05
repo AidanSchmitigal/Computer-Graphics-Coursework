@@ -16,3 +16,10 @@ unsigned char *ReadTexture3D(const char *filename, int *width, int *height, int 
 bool loadImageTexture(const char *file, GLuint *texture, int *width, int *height);
 bool loadTexture2D(const char *file, GLuint textureSlot, GLuint *texture, int *width, int *height);
 bool loadTexture3D(const char *file, GLuint textureSlot, GLuint *texture, int *width, int *height, int *depth);
+
+namespace Textures {
+extern GLuint noise2dTexture;
+extern GLuint noise3dTexture;
+
+void InitTextures();
+}  // namespace Textures

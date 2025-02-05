@@ -2,7 +2,9 @@
 
 #include "imgui.h"
 #include "imgui_internal.h"
+#include "scene.h"
 #include "shader.h"
+#include "utils/texture.h"
 
 namespace ShaderEditor {
 
@@ -309,6 +311,16 @@ char* SerializeUniform(const Uniform& uniform) {
 void SetShaderUniform(Uniform& uniform, GLSLProgram& program) {
   if (uniform.type == GL_FLOAT) {
     auto& v = std::get<float>(uniform.value);
+
+    if (uniform.name == "uTime")
+      v = Scene::Time;
+    else if (uniform.name == "uTimeDelta")
+      v = Scene::DeltaTime;
+    else if (uniform.name == "uTimeLoop")
+      v = fmodf(Scene::Time, 1.f);
+    else if (uniform.name == "uTimeLoop10")
+      v = fmodf(Scene::Time, 10.f);
+
     program.SetUniformVariable((char*)uniform.name.c_str(), v);
   } else if (uniform.type == GL_FLOAT_VEC2) {
     auto& v = std::get<glm::vec2>(uniform.value);
@@ -405,10 +417,12 @@ void SetShaderUniform(Uniform& uniform, GLSLProgram& program) {
     // program.SetUniformVariable((char*)uniform.name.c_str(), v);
   } else if (uniform.type == GL_SAMPLER_2D) {
     auto& v = std::get<uint>(uniform.value);
-    program.SetUniformVariable((char*)uniform.name.c_str(), 0);  // TODO: Check if this number is correct
+    program.SetUniformVariable((char*)uniform.name.c_str(), 1);  // TODO: Check if this number is correct
+    // program.SetUniformVariable((char*)uniform.name.c_str(), Textures::noise2dTexture);  // TODO: Check if this number is correct
   } else if (uniform.type == GL_SAMPLER_3D) {
     auto& v = std::get<uint>(uniform.value);
-    program.SetUniformVariable((char*)uniform.name.c_str(), 1);
+    program.SetUniformVariable((char*)uniform.name.c_str(), 0);
+    // program.SetUniformVariable((char*)uniform.name.c_str(), Textures::noise3dTexture);
   } else if (uniform.type == GL_SAMPLER_CUBE) {
     // auto& v = std::get<GLuint>(uniform.value);
     // program.SetUniformVariable((char*)uniform.name.c_str(), v);

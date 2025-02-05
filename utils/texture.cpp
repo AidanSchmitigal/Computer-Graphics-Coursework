@@ -6,6 +6,37 @@
 #include "bmptotexture.h"
 #include "utils/stb_image.h"
 
+namespace Textures {
+GLuint noise2dTexture;
+GLuint noise3dTexture;
+
+// MARK: texture_setup
+void InitTextures() {
+  printf("Initializing noise textures\n");
+  int size = 256;
+  const char *noise3d_path = "textures/noise3d.064.raw";
+  const char *noise2d_path = "textures/noise2d.064.raw";
+
+  bool loaded = loadTexture3D(noise3d_path, GL_TEXTURE0, &Textures::noise3dTexture, &size, &size, &size);
+
+  if (!loaded) {
+    fprintf(stderr, "Could not load 3D noise texture from file\n");
+    return;
+  }
+
+  printf("Created 3D noise texture with size %d, and id %d\n", size, Textures::noise3dTexture);
+
+  loaded = loadTexture2D(noise2d_path, GL_TEXTURE1, &Textures::noise2dTexture, &size, &size);
+
+  if (!loaded) {
+    fprintf(stderr, "Could not load 2D noise texture from file\n");
+    return;
+  }
+
+  printf("Created 2D noise texture with size %d, and id %d\n", size, Textures::noise2dTexture);
+}
+}  // namespace Textures
+
 GLFWimage loadImage(const char *filename) {
   GLFWimage image;
   int channels;
@@ -84,13 +115,14 @@ bool loadTexture2D(const char *file, GLuint textureSlot, GLuint *texture, int *w
   } else {
     fprintf(stderr, "Opened '%s': width = %d ; height = %d\n", file, *width, *height);
     glGenTextures(1, texture);
+    glActiveTexture(textureSlot);
     glBindTexture(GL_TEXTURE_2D, *texture);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, *width, *height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureData);
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, *width, *height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
   }
   return true;
 }
