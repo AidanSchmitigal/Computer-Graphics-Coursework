@@ -7,7 +7,7 @@ BUILD_DIR = ./build
 SOURCES = sample.cpp $(shell find ./utils ./object ./editor -name "*.cpp")
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp $(IMGUI_DIR)/imgui_stdlib.cpp
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
-SOURCES += ./imguizmo/ImGuizmo.cpp
+SOURCES += ./imguizmo/imguizmo.cpp
 OBJS = $(addprefix $(BUILD_DIR)/, $(SOURCES:.cpp=.o))
 
 INCLUDES = ./imgui ./imgui/backends ./imguizmo ./

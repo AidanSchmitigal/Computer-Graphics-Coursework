@@ -163,7 +163,7 @@ void Object::Display() {
 
   glCallList(objectDisplayLists[type]);
 
-  use_shader->unUse();
+  // use_shader->unUse();
   glPopMatrix();
 }
 

@@ -44,5 +44,6 @@ struct Shader {
 };
 
 void checkShaderFiles();
+void InitShaders();
 
 }  // namespace ShaderEditor

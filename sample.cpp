@@ -162,6 +162,134 @@ static void glfw_error_callback(int error, const char *description) {
   fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
+void dumpOpenGLTextureAndShaderState() {
+  // Print basic context information
+  const GLubyte *vendor = glGetString(GL_VENDOR);
+  const GLubyte *renderer = glGetString(GL_RENDERER);
+  const GLubyte *version = glGetString(GL_VERSION);
+  const GLubyte *glslVer = glGetString(GL_SHADING_LANGUAGE_VERSION);
+
+  printf("OpenGL Vendor:   %s\n", vendor);
+  printf("OpenGL Renderer: %s\n", renderer);
+  printf("OpenGL Version:  %s\n", version);
+  printf("GLSL Version:    %s\n", glslVer);
+
+  // Get the current shader program
+  GLint currentProgram = 0;
+  glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+  printf("Current Shader Program: %d\n", currentProgram);
+
+  // Get active texture state info
+  GLint activeTexture = 0;
+  glGetIntegerv(GL_ACTIVE_TEXTURE, &activeTexture);
+  printf("Active Texture Unit: GL_TEXTURE%d\n", activeTexture - GL_TEXTURE0);
+
+  // Get the maximum number of texture units available
+  GLint maxCombinedTextureUnits = 0;
+  glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &maxCombinedTextureUnits);
+  printf("Max Combined Texture Image Units: %d\n", maxCombinedTextureUnits);
+
+  // Loop over all texture units and query which textures are bound.
+  for (int i = 0; i < maxCombinedTextureUnits; i++) {
+    // Activate texture unit i
+    glActiveTexture(GL_TEXTURE0 + i);
+
+    // Query bindings for 2D and Cube Map textures.
+    GLint binding2D = 0, bindingCube = 0, binding3D = 0;
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &binding2D);
+    glGetIntegerv(GL_TEXTURE_BINDING_3D, &binding3D);
+    glGetIntegerv(GL_TEXTURE_BINDING_CUBE_MAP, &bindingCube);
+
+    printf("Texture Unit %d:\n", i);
+    printf("   GL_TEXTURE_BINDING_2D: %d\n", binding2D);
+    if (binding2D != 0) {
+      // For a bound 2D texture, print some common parameters.
+      GLint wrapS, wrapT, minFilter, magFilter;
+      // (Since the texture is bound, we can query its parameters.)
+      glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, &wrapS);
+      glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, &wrapT);
+      glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, &minFilter);
+      glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, &magFilter);
+      printf("      GL_TEXTURE_2D Parameters:\n");
+      printf("         GL_TEXTURE_WRAP_S: %d\n", wrapS);
+      printf("         GL_TEXTURE_WRAP_T: %d\n", wrapT);
+      printf("         GL_TEXTURE_MIN_FILTER: %d\n", minFilter);
+      printf("         GL_TEXTURE_MAG_FILTER: %d\n", magFilter);
+    }
+
+    printf("   GL_TEXTURE_BINDING_3D: %d\n", binding3D);
+    if (binding3D != 0) {
+      // For a bound 3D texture, print some common parameters.
+      GLint wrapS, wrapT, wrapR, minFilter, magFilter;
+      // (Since the texture is bound, we can query its parameters.)
+      glGetTexParameteriv(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, &wrapS);
+      glGetTexParameteriv(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, &wrapT);
+      glGetTexParameteriv(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, &wrapR);
+      glGetTexParameteriv(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, &minFilter);
+      glGetTexParameteriv(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, &magFilter);
+      printf("      GL_TEXTURE_3D Parameters:\n");
+      printf("         GL_TEXTURE_WRAP_S: %d\n", wrapS);
+      printf("         GL_TEXTURE_WRAP_T: %d\n", wrapT);
+      printf("         GL_TEXTURE_WRAP_R: %d\n", wrapR);
+      printf("         GL_TEXTURE_MIN_FILTER: %d\n", minFilter);
+      printf("         GL_TEXTURE_MAG_FILTER: %d\n", magFilter);
+    }
+
+    printf("   GL_TEXTURE_BINDING_CUBE_MAP: %d\n", bindingCube);
+    if (bindingCube != 0) {
+      // For a bound Cube Map texture, query similar parameters.
+      GLint wrapS, wrapT, minFilter, magFilter;
+      glGetTexParameteriv(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, &wrapS);
+      glGetTexParameteriv(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, &wrapT);
+      glGetTexParameteriv(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, &minFilter);
+      glGetTexParameteriv(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, &magFilter);
+      printf("      GL_TEXTURE_CUBE_MAP Parameters:\n");
+      printf("         GL_TEXTURE_WRAP_S: %d\n", wrapS);
+      printf("         GL_TEXTURE_WRAP_T: %d\n", wrapT);
+      printf("         GL_TEXTURE_MIN_FILTER: %d\n", minFilter);
+      printf("         GL_TEXTURE_MAG_FILTER: %d\n", magFilter);
+    }
+  }
+
+  // Restore the active texture unit (optional, if you care)
+  glActiveTexture(activeTexture);
+
+  // If a shader program is active, dump its uniform and attribute info.
+  if (currentProgram != 0) {
+    // Dump active uniforms
+    GLint numUniforms = 0;
+    glGetProgramiv(currentProgram, GL_ACTIVE_UNIFORMS, &numUniforms);
+    printf("Active Uniforms: %d\n", numUniforms);
+    for (int i = 0; i < numUniforms; i++) {
+      char name[256] = {0};
+      GLsizei length = 0;
+      GLint size = 0;
+      GLenum type = 0;
+      glGetActiveUniform(currentProgram, i, sizeof(name), &length, &size, &type, name);
+      GLint location = glGetUniformLocation(currentProgram, name);
+      printf("   Uniform %d: Name = %s, Location = %d, Size = %d, Type = 0x%x\n",
+             i, name, location, size, type);
+    }
+
+    // Dump active vertex attributes
+    GLint numAttribs = 0;
+    glGetProgramiv(currentProgram, GL_ACTIVE_ATTRIBUTES, &numAttribs);
+    printf("Active Attributes: %d\n", numAttribs);
+    for (int i = 0; i < numAttribs; i++) {
+      char name[256] = {0};
+      GLsizei length = 0;
+      GLint size = 0;
+      GLenum type = 0;
+      glGetActiveAttrib(currentProgram, i, sizeof(name), &length, &size, &type, name);
+      GLint location = glGetAttribLocation(currentProgram, name);
+      printf("   Attribute %d: Name = %s, Location = %d, Size = %d, Type = 0x%x\n",
+             i, name, location, size, type);
+    }
+  } else {
+    printf("No shader program is currently active.\n");
+  }
+}
+
 // main program:
 // MARK: Main
 int main(int argc, char *argv[]) {
@@ -177,9 +305,13 @@ int main(int argc, char *argv[]) {
     return 1;
 
   // setup all the graphics stuff:
-  // this needs to be called once and only once!
+  // this needs to be called obnce and only once!
 
   InitGraphics();
+
+  // float monitorWidth, monitorHeight;
+  // glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), &monitorWidth, &monitorHeight);
+  // printf("glfwGetMonitorContentScale: %f, %f\n", monitorWidth, monitorHeight);
 
   noise_setseed(1);
 
@@ -194,11 +326,13 @@ int main(int argc, char *argv[]) {
     // (this will never return)
 
     glfwPollEvents();
+
     // If the window is minimized, we stop rendering the scene
     if (glfwGetWindowAttrib(MainWindow, GLFW_ICONIFIED) == GLFW_TRUE || glfwGetWindowAttrib(MainWindow, GLFW_VISIBLE) == GLFW_FALSE) {
       ImGui_ImplGlfw_Sleep(100);
       continue;
     }
+
     Animate();
     Display();
     ShaderEditor::checkShaderFiles();
@@ -380,8 +514,11 @@ void DisplayImGui() {
 // MARK: Display
 void Display() {
   ImGui_ImplOpenGL3_NewFrame();
+  GLenum err;
+  while ((err = glGetError()) != GL_NO_ERROR) {
+    // printf("Errors after ImGui_ImplOpenGL3_NewFrame: %s\n", gluErrorString(err));
+  }
   ImGui_ImplGlfw_NewFrame();
-
   DisplayImGui();
 
   // set the viewport to be a square centered in the window:
@@ -463,6 +600,8 @@ void Display() {
 
   Objects::DisplayObjects();
 
+  // dumpOpenGLTextureAndShaderState();
+
   Pattern.UnUse();
 
   // MARK: ImGui Render
@@ -496,6 +635,8 @@ void InitGraphics() {
 
   // glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
   // glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+  // glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  // glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
   // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);  // Required on Mac
@@ -529,7 +670,15 @@ void InitGraphics() {
   glfwSetScrollCallback(MainWindow, MouseWheel);
   glfwSetWindowFocusCallback(MainWindow, Visibility);
 
+  // dumpOpenGLTextureAndShaderState();
+
+  ShaderEditor::InitShaders();
+
+  // dumpOpenGLTextureAndShaderState();
+
   Textures::InitTextures();
+
+  // dumpOpenGLTextureAndShaderState();
 
   // TODO: Find a better spot of Program loading
   // Pattern.Init();
@@ -618,8 +767,6 @@ void InitImGui() {
   ini_handler.WriteAllFn = UserData_WriteAll;
   ImGui::AddSettingsHandler(&ini_handler);
 
-  ShaderEditor::RegisterImGuiSettingsHandler();
-
   ImGuiIO &io = ImGui::GetIO();
   (void)io;
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
@@ -634,6 +781,12 @@ void InitImGui() {
   // Setup Platform/Renderer backends
   ImGui_ImplGlfw_InitForOpenGL(MainWindow, false);  // False for InstallCallbacks
   ImGui_ImplOpenGL3_Init("#version 120");
+
+  GLenum err;
+  while ((err = glGetError()) != GL_NO_ERROR) {
+    printf("Errors after ImGui_ImplOpenGL3_Init: %s\n", gluErrorString(err));
+  }
+
   // ImGui_ImplOpenGL3_Init("#version 330");
   ImGui_ImplGlfw_InstallCallbacks(MainWindow);  // just so we can do it here for clarity
 

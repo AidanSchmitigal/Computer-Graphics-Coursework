@@ -106,6 +106,8 @@ void findShaders() {
   } catch (const std::filesystem::filesystem_error& e) {
     printf("Error: %s\n", e.what());
   }
+
+  shaders.back()->program.Use();
 }
 
 // MARK: Compile
@@ -134,7 +136,7 @@ void compileShaderProgram(std::shared_ptr<Shader>& shader) {
       }
     }
 
-    return;
+    // return;
   }
   shader->program.Use();
 
@@ -149,6 +151,8 @@ void compileShaderProgram(std::shared_ptr<Shader>& shader) {
   glGetProgramiv(shader->program.GetProgram(), GL_ACTIVE_UNIFORM_MAX_LENGTH, &bufsize);
   char* lname = new char[bufsize + 1];
 
+  printf("Found %i uniforms\n", numactiveuniforms);
+
   for (auto uniform : shader->uniforms) {
     uniform.missing = true;
   }
@@ -157,6 +161,8 @@ void compileShaderProgram(std::shared_ptr<Shader>& shader) {
     GLint lsize;
     GLenum ltype;
     glGetActiveUniform(shader->program.GetProgram(), i, bufsize, NULL, &lsize, &ltype, lname);
+
+    printf("Found uniform: %s, %i, %i", lname, lsize, ltype);
 
     if (strncmp(lname, "gl_", 3) == 0) continue;
 
@@ -173,12 +179,14 @@ void compileShaderProgram(std::shared_ptr<Shader>& shader) {
       // Place in front if starts with "gl_"  or place back if not
       shader->uniforms.emplace_back(lsize, ltype, lname, false);
       InitializeUniform(shader->uniforms.back());
+      SetShaderUniform(shader->uniforms.back(), shader->program);
     } else {
       existingUniform->missing = false;
     }
   }
   delete[] lname;
-  shader->program.UnUse();
+  // shader->program.UnUse();
+  shader->program.Use();
 }
 
 std::chrono::time_point<std::chrono::system_clock> lastCheckTime = std::chrono::system_clock::now();
@@ -235,16 +243,16 @@ void checkShaderFiles() {
 void showShaderError(const std::shared_ptr<Shader>& shader) {
   if (shader->error.empty()) return;
 
-  ImGui::PushStyleColor(ImGuiCol_WindowBg, ImLerp(ImGui::GetStyle().Colors[ImGuiCol_WindowBg], ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 0.15f));
+  ImGui::PushStyleColor(ImGuiCol_ChildBg, ImLerp(ImGui::GetStyle().Colors[ImGuiCol_WindowBg], ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 0.15f));
   ImGui::PushID(shader->id);
-  ImGui::Begin("##shader_error", NULL, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings);
+  ImGui::BeginChild(ImGui::GetID("##shadererror"), ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings);
   ImGui::PopStyleColor();
   ImGui::SeparatorText("ERROR IN SHADER COMPILATION");
   ImGui::Text("Shader Name: %s", shader->name);
   ImGui::Separator();
   ImGui::Text("Error: %s", shader->error.c_str());
 
-  ImGui::End();
+  ImGui::EndChild();
   ImGui::PopID();
 }
 
@@ -344,7 +352,7 @@ void ShowShaderPropertiesPanel() {
 
     if (uniform.missing) {
       ImGui::Text("Missing uniform: %s", uniform.name.c_str());
-      continue;
+      // continue;
     }
 
     ImGui::Text("Name: %s", uniform.name.c_str());
@@ -505,8 +513,16 @@ void ShowShaderPropertiesPanel() {
 
 // MARK: Use Shader
 void Shader::use() {
-  program.Use();
   // printf("Using shader: %d\n", program.GetProgram());
+
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, Textures::noise2dTexture);
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_3D, Textures::noise3dTexture);
+  glActiveTexture(GL_TEXTURE2);
+  glBindTexture(GL_TEXTURE_CUBE_MAP, Textures::nvidiaCubeTexture);
+
+  program.Use();
 
   // Set Uniforms
   for (int i = 0; i < uniforms.size(); i++) {
@@ -525,7 +541,7 @@ void Shader::unUse() {
 // }
 
 // MARK: Register ImGui Settings Handler
-void RegisterImGuiSettingsHandler() {
+void InitShaders() {
   findShaders();
 }
 

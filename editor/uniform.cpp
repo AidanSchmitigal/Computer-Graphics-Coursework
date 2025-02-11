@@ -165,9 +165,10 @@ void InitializeUniform(Uniform& uniform) {
       uniform.value = (uint)0;
       break;
     case GL_SAMPLER_3D:
-      uniform.value = (uint)0;
+      uniform.value = (uint)1;
       break;
     case GL_SAMPLER_CUBE:
+      uniform.value = (uint)2;
       break;
     case GL_SAMPLER_1D_SHADOW:
       break;
@@ -416,16 +417,20 @@ void SetShaderUniform(Uniform& uniform, GLSLProgram& program) {
     auto& v = std::get<uint>(uniform.value);
     // program.SetUniformVariable((char*)uniform.name.c_str(), v);
   } else if (uniform.type == GL_SAMPLER_2D) {
-    auto& v = std::get<uint>(uniform.value);
-    program.SetUniformVariable((char*)uniform.name.c_str(), 1);  // TODO: Check if this number is correct
-    // program.SetUniformVariable((char*)uniform.name.c_str(), Textures::noise2dTexture);  // TODO: Check if this number is correct
+    // auto& v = std::get<uint>(uniform.value);
+    program.SetUniformVariable((char*)uniform.name.c_str(), 0);  // TODO: Check if this number is correct
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, Textures::noise2dTexture);
   } else if (uniform.type == GL_SAMPLER_3D) {
-    auto& v = std::get<uint>(uniform.value);
-    program.SetUniformVariable((char*)uniform.name.c_str(), 0);
-    // program.SetUniformVariable((char*)uniform.name.c_str(), Textures::noise3dTexture);
+    // auto& v = std::get<uint>(uniform.value);
+    program.SetUniformVariable((char*)uniform.name.c_str(), 1);  // TODO:
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_3D, Textures::noise3dTexture);
   } else if (uniform.type == GL_SAMPLER_CUBE) {
     // auto& v = std::get<GLuint>(uniform.value);
-    // program.SetUniformVariable((char*)uniform.name.c_str(), v);
+    program.SetUniformVariable((char*)uniform.name.c_str(), 2);  // TODO
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, Textures::nvidiaCubeTexture);
   } else if (uniform.type == GL_SAMPLER_1D_SHADOW) {
     // auto& v = std::get<GLuint>(uniform.value);
     // program.SetUniformVariable((char*)uniform.name.c_str(), v);
