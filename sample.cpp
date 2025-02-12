@@ -117,7 +117,7 @@ const GLfloat AXES_WIDTH = 3.;
 
 // non-constant global variables:
 
-float Xmouse, Ymouse;  // mouse values
+double Xmouse, Ymouse;  // mouse values
 
 GLuint AxesList;            // list to hold the axes
 GLFWwindow *MainWindow;     // window id for main graphics window
@@ -600,8 +600,6 @@ void Display() {
 
   Objects::DisplayObjects();
 
-  // dumpOpenGLTextureAndShaderState();
-
   Pattern.UnUse();
 
   // MARK: ImGui Render
@@ -670,15 +668,8 @@ void InitGraphics() {
   glfwSetScrollCallback(MainWindow, MouseWheel);
   glfwSetWindowFocusCallback(MainWindow, Visibility);
 
-  // dumpOpenGLTextureAndShaderState();
-
   ShaderEditor::InitShaders();
-
-  // dumpOpenGLTextureAndShaderState();
-
   Textures::InitTextures();
-
-  // dumpOpenGLTextureAndShaderState();
 
   // TODO: Find a better spot of Program loading
   // Pattern.Init();
@@ -893,8 +884,8 @@ void MouseMotion(GLFWwindow *window, double xpos, double ypos) {
 
   // printf("MosueMoved: %f, %f\n", xpos, ypos);
 
-  int dx = xpos - Xmouse;  // change in mouse coords
-  int dy = ypos - Ymouse;
+  double dx = xpos - Xmouse;  // change in mouse coords
+  double dy = ypos - Ymouse;
 
   if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {

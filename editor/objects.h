@@ -27,6 +27,13 @@ enum class ObjectType { Cube,
                         Torus,
                         Plane,
                         Plane2,
+                        EuropaClipper,
+                        DirtMound,
+                        Frog,
+                        GardenSign,
+                        ISS,
+                        SeedPouch,
+                        WateringCan,
                         NUM_OBJECT_TYPES };
 
 struct Object {

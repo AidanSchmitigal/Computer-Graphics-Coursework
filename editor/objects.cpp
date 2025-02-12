@@ -4,6 +4,7 @@
 
 #include "imguizmo.h"
 #include "objects/osucone.cpp"
+#include "objects/osucube.cpp"
 #include "objects/osugrid.cpp"
 #include "objects/osusphere.cpp"
 #include "objects/osutorus.cpp"
@@ -14,14 +15,24 @@ namespace Objects {
 std::vector<std::shared_ptr<Object>> objects;
 int selectedObject = -1;
 
-const char* objectTypesNames[] = {"Cube", "Sphere", "Cylinder", "Cone", "Torus", "Plane", "Plane2"};
-const ObjectType objectTypes[] = {ObjectType::Cube,
-                                  ObjectType::Sphere,
-                                  ObjectType::Cylinder,
-                                  ObjectType::Cone,
-                                  ObjectType::Torus,
-                                  ObjectType::Plane,
-                                  ObjectType::Plane2};
+const char* objectTypesNames[] = {"Cube", "Sphere", "Cylinder", "Cone", "Torus", "Plane", "Vertical Plane", "Europa Clipper", "Dirt Mound", "Frog", "Garden Sign", "ISS", "Seed Pouch", "Watering Can"};
+const ObjectType objectTypes[] = {
+    ObjectType::Cube,
+    ObjectType::Sphere,
+    ObjectType::Cylinder,
+    ObjectType::Cone,
+    ObjectType::Torus,
+    ObjectType::Plane,
+    ObjectType::Plane2,
+    ObjectType::EuropaClipper,
+    ObjectType::DirtMound,
+    ObjectType::Frog,
+    ObjectType::GardenSign,
+    ObjectType::ISS,
+    // ObjectType::Helicopter,
+    ObjectType::SeedPouch,
+    ObjectType::WateringCan,
+};
 
 std::unordered_map<ObjectType, GLuint> objectDisplayLists = {};
 
@@ -45,37 +56,91 @@ void InitLists() {
 
   // create the object:
 
-  GLuint newList = objectDisplayLists[ObjectType::Sphere] = glGenLists(1);
+  GLuint newList = objectDisplayLists[ObjectType::Cube] = glGenLists(1);
+  printf("Cube\n");
+  glNewList(newList, GL_COMPILE);
+  OsuCube(1., 1., 1.);
+  glEndList();
+
+  newList = objectDisplayLists[ObjectType::Sphere] = glGenLists(1);
+  printf("Sphere\n");
   glNewList(newList, GL_COMPILE);
   OsuSphere(1., 64, 64);
   glEndList();
 
   newList = objectDisplayLists[ObjectType::Cone] = glGenLists(1);
+  printf("Cone\n");
   glNewList(newList, GL_COMPILE);
   OsuCone(1.f, 0.f, 1.f, 10, 10);
   glEndList();
 
   newList = objectDisplayLists[ObjectType::Cylinder] = glGenLists(1);
+  printf("Cylinder\n");
   glNewList(newList, GL_COMPILE);
   OsuCone(1.f, 1.f, 1.f, 10, 10);
   glEndList();
 
   newList = objectDisplayLists[ObjectType::Torus] = glGenLists(1);
+  printf("Torus\n");
   glNewList(newList, GL_COMPILE);
   OsuTorus(1.f, 0.2f, 10, 10);
   glEndList();
 
   newList = objectDisplayLists[ObjectType::Plane] = glGenLists(1);
+  printf("Plane\n");
   glNewList(newList, GL_COMPILE);
   OsuGrid(10.0f, 10.0f);
   glEndList();
 
   newList = objectDisplayLists[ObjectType::Plane2] = glGenLists(1);
+  printf("Plane2\n");
   glNewList(newList, GL_COMPILE);
   OsuGrid2();
   glEndList();
 
-  newList = objectDisplayLists[ObjectType::Cube] = glGenLists(1);
+  newList = objectDisplayLists[ObjectType::EuropaClipper] = glGenLists(1);
+  printf("EuropaClipper\n");
+  glNewList(newList, GL_COMPILE);
+  LoadObjFile("objects/clipper.obj");
+  glEndList();
+
+  newList = objectDisplayLists[ObjectType::DirtMound] = glGenLists(1);
+  printf("DirtMound\n");
+  glNewList(newList, GL_COMPILE);
+  LoadObjFile("objects/dirt_mound.obj");
+  glEndList();
+
+  newList = objectDisplayLists[ObjectType::Frog] = glGenLists(1);
+  printf("Frog\n");
+  glNewList(newList, GL_COMPILE);
+  LoadObjFile("objects/dumbfrog.obj");
+  glEndList();
+
+  newList = objectDisplayLists[ObjectType::GardenSign] = glGenLists(1);
+  printf("GardenSign\n");
+  glNewList(newList, GL_COMPILE);
+  LoadObjFile("objects/gardensign.obj");
+  glEndList();
+
+  newList = objectDisplayLists[ObjectType::ISS] = glGenLists(1);
+  printf("ISS\n");
+  glNewList(newList, GL_COMPILE);
+  // LoadObjFile("objects/iss.obj");
+  glEndList();
+
+  // newList = objectDisplayLists[ObjectType::Helicopter] = glGenLists(1);
+  // glNewList(newList, GL_COMPILE);
+  // LoadObjFile("objects/helicopter.obj");
+  // glEndList();
+
+  newList = objectDisplayLists[ObjectType::SeedPouch] = glGenLists(1);
+  printf("SeedPouch\n");
+  glNewList(newList, GL_COMPILE);
+  LoadObjFile("objects/seed_pouch.obj");
+  glEndList();
+
+  newList = objectDisplayLists[ObjectType::WateringCan] = glGenLists(1);
+  printf("WateringCan\n");
   glNewList(newList, GL_COMPILE);
   LoadObjFile("objects/watering_can.obj");
   glEndList();
@@ -163,7 +228,7 @@ void Object::Display() {
 
   glCallList(objectDisplayLists[type]);
 
-  // use_shader->unUse();
+  use_shader->unUse();
   glPopMatrix();
 }
 

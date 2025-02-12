@@ -185,7 +185,7 @@ void compileShaderProgram(std::shared_ptr<Shader>& shader) {
     }
   }
   delete[] lname;
-  // shader->program.UnUse();
+  shader->program.UnUse();
   shader->program.Use();
 }
 
