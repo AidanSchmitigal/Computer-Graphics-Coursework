@@ -40,9 +40,9 @@ bool viewShaderPropertiesPanel = true;
 
 void compileShaderProgram(std::shared_ptr<Shader>& shader);
 
-// const std::array<GLuint*, 1> textures2D = {&noise2dTexture};
-const std::array<const char*, 1> textures2DNames = {"noise2d"};
-// const std::array<GLuint*, 1> textures3D = {&noise3dTexture};
+const std::array<int, 4> textures2DBindLocations = {0, 3, 4, 5};
+const std::array<const char*, 4> textures2DNames = {"noise2d", "cornell_box", "color_bars", "lena"};
+const std::array<int, 1> textures3DBindLocations = {1};
 const std::array<const char*, 1> textures3DNames = {"noise3d"};
 
 // template <typename TP>
@@ -484,10 +484,10 @@ void ShowShaderPropertiesPanel() {
       // }
     } else if (uniform.type == GL_SAMPLER_2D) {
       auto& v = std::get<uint>(uniform.value);
-      if (ImGui::BeginCombo(uniform.name.c_str(), textures2DNames[v])) {
+      if (ImGui::BeginCombo(uniform.name.c_str(), "name")) {
         for (int i = 0; i < textures2DNames.size(); i++) {
-          if (ImGui::Selectable(textures2DNames[i], v == i)) {
-            v = i;
+          if (ImGui::Selectable(textures2DNames[i], v == textures2DBindLocations[i])) {
+            v = textures2DBindLocations[i];
           }
         }
         ImGui::EndCombo();
@@ -496,8 +496,8 @@ void ShowShaderPropertiesPanel() {
       auto& v = std::get<uint>(uniform.value);
       if (ImGui::BeginCombo(uniform.name.c_str(), textures3DNames[v])) {
         for (int i = 0; i < textures3DNames.size(); i++) {
-          if (ImGui::Selectable(textures3DNames[i], v == i)) {
-            v = i;
+          if (ImGui::Selectable(textures3DNames[i], v == textures3DBindLocations[i])) {
+            v = textures3DBindLocations[i];
           }
         }
         ImGui::EndCombo();

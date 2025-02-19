@@ -10,6 +10,11 @@ namespace Textures {
 GLuint noise2dTexture;
 GLuint noise3dTexture;
 GLuint nvidiaCubeTexture;
+GLuint cornellBoxTexture;
+GLuint colorBarsTexture;
+GLuint lenaTexture;
+
+const std::array<GLuint *, 6> textureBindToId = {&noise2dTexture, &noise3dTexture, &nvidiaCubeTexture, &cornellBoxTexture, &colorBarsTexture, &lenaTexture};
 
 // MARK: texture_setup
 void InitTextures() {
@@ -17,6 +22,9 @@ void InitTextures() {
   const char *noise2d_path = "textures/noise2d.064.raw";
   const char *noise3d_path = "textures/noise3d.064.raw";
   const char *nvidia_cube_path[6] = {"textures/nvposx.bmp", "textures/nvnegx.bmp", "textures/nvposy.bmp", "textures/nvnegy.bmp", "textures/nvposz.bmp", "textures/nvnegz.bmp"};
+  const char *cornell_box_path = "textures/cornell_box.bmp";
+  const char *color_bars_path = "textures/color_bars.bmp";
+  const char *lena_path = "textures/lena.bmp";
 
   bool loaded = loadTexture2D(noise2d_path, GL_TEXTURE0, &Textures::noise2dTexture);
 
@@ -42,6 +50,30 @@ void InitTextures() {
   }
 
   printf("Created nvidia cube texture id %d, slot %d, %d\n", Textures::nvidiaCubeTexture, GL_TEXTURE2, GL_TEXTURE2 - GL_TEXTURE0);
+
+  loaded = loadImageTexture(cornell_box_path, GL_TEXTURE3, &Textures::cornellBoxTexture);
+
+  if (!loaded) {
+    fprintf(stderr, "Could not load cornell box texture from file\n");
+    return;
+  }
+  printf("Created cornell box texture id %d, slot %d, %d\n", Textures::cornellBoxTexture, GL_TEXTURE3, GL_TEXTURE3 - GL_TEXTURE0);
+
+  loaded = loadImageTexture(color_bars_path, GL_TEXTURE4, &Textures::colorBarsTexture);
+
+  if (!loaded) {
+    fprintf(stderr, "Could not load color bars texture from file\n");
+    return;
+  }
+  printf("Created color bars texture id %d, slot %d, %d\n", Textures::colorBarsTexture, GL_TEXTURE4, GL_TEXTURE4 - GL_TEXTURE0);
+
+  loaded = loadImageTexture(lena_path, GL_TEXTURE5, &Textures::lenaTexture);
+
+  if (!loaded) {
+    fprintf(stderr, "Could not load lena texture from file\n");
+    return;
+  }
+  printf("Created lena texture id %d, slot %d, %d\n", Textures::lenaTexture, GL_TEXTURE5, GL_TEXTURE5 - GL_TEXTURE0);
 
   GLenum err;
   while ((err = glGetError()) != GL_NO_ERROR) {
@@ -101,13 +133,14 @@ unsigned char *ReadTexture2D(const char *filename, int *width, int *height) {
   return texture;
 }
 
-bool loadImageTexture(const char *file, GLuint *texture, int *width, int *height) {
-  unsigned char *textureData = BmpToTexture(file, width, height);
+bool loadImageTexture(const char *file, GLuint textureSlot, GLuint *texture) {
+  int width, height;
+  unsigned char *textureData = BmpToTexture(file, &width, &height);
   if (textureData == NULL) {
     fprintf(stderr, "Cannot open texture '%s'\n", file);
     return false;
   } else {
-    fprintf(stderr, "Opened '%s': width = %d ; height = %d\n", file, *width, *height);
+    fprintf(stderr, "Opened '%s': width = %d ; height = %d\n", file, width, height);
     glGenTextures(1, texture);
     glBindTexture(GL_TEXTURE_2D, *texture);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -115,7 +148,7 @@ bool loadImageTexture(const char *file, GLuint *texture, int *width, int *height
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, *width, *height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureData);
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureData);
   }
   return true;
 }

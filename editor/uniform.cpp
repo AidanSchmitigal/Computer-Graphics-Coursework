@@ -417,15 +417,21 @@ void SetShaderUniform(Uniform& uniform, GLSLProgram& program) {
     auto& v = std::get<uint>(uniform.value);
     // program.SetUniformVariable((char*)uniform.name.c_str(), v);
   } else if (uniform.type == GL_SAMPLER_2D) {
-    // auto& v = std::get<uint>(uniform.value);
-    program.SetUniformVariable((char*)uniform.name.c_str(), 0);  // TODO: Check if this number is correct
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, Textures::noise2dTexture);
+    auto& v = std::get<uint>(uniform.value);
+    // program.SetUniformVariable((char*)uniform.name.c_str(), 0);  // TODO: Check if this number is correct
+    // glActiveTexture(GL_TEXTURE0);
+    // glBindTexture(GL_TEXTURE_2D, Textures::noise2dTexture);
+    program.SetUniformVariable((char*)uniform.name.c_str(), v);  // TODO: Check if this number is correct
+    glActiveTexture(GL_TEXTURE0 + v);
+    glBindTexture(GL_TEXTURE_2D, *Textures::textureBindToId[v]);
   } else if (uniform.type == GL_SAMPLER_3D) {
-    // auto& v = std::get<uint>(uniform.value);
-    program.SetUniformVariable((char*)uniform.name.c_str(), 1);  // TODO:
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_3D, Textures::noise3dTexture);
+    auto& v = std::get<uint>(uniform.value);
+    // program.SetUniformVariable((char*)uniform.name.c_str(), 1);  // TODO:
+    // glActiveTexture(GL_TEXTURE1);
+    // glBindTexture(GL_TEXTURE_3D, Textures::noise3dTexture);
+    program.SetUniformVariable((char*)uniform.name.c_str(), v);  // TODO: Check if this number is correct
+    glActiveTexture(GL_TEXTURE0 + v);
+    glBindTexture(GL_TEXTURE_2D, *Textures::textureBindToId[v]);
   } else if (uniform.type == GL_SAMPLER_CUBE) {
     // auto& v = std::get<GLuint>(uniform.value);
     program.SetUniformVariable((char*)uniform.name.c_str(), 2);  // TODO
