@@ -117,8 +117,6 @@ const GLfloat AXES_WIDTH = 3.;
 
 // non-constant global variables:
 
-double Xmouse, Ymouse;  // mouse values
-
 GLuint AxesList;            // list to hold the axes
 GLFWwindow *MainWindow;     // window id for main graphics window
 bool WindowVisible = true;  // is the window visible?
@@ -368,6 +366,15 @@ void Animate() {
   if (Debug::freezeTime == false) {
     Scene::Time += Scene::DeltaTime;
   }
+
+  int viewport[4];
+  glGetIntegerv(GL_VIEWPORT, viewport);
+  Scene::Viewport[0] = viewport[0];
+  Scene::Viewport[1] = viewport[1];
+  Scene::Viewport[2] = viewport[2];
+  Scene::Viewport[3] = viewport[3];
+
+  Scene::FrameCount++;
 }
 
 // MARK: DisplayImGui
@@ -884,8 +891,8 @@ void MouseMotion(GLFWwindow *window, double xpos, double ypos) {
 
   // printf("MosueMoved: %f, %f\n", xpos, ypos);
 
-  double dx = xpos - Xmouse;  // change in mouse coords
-  double dy = ypos - Ymouse;
+  double dx = xpos - Scene::MouseX;  // change in mouse coords
+  double dy = ypos - Scene::MouseY;
 
   if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
@@ -923,8 +930,8 @@ void MouseMotion(GLFWwindow *window, double xpos, double ypos) {
       Scale = MINSCALE;
   }
 
-  Xmouse = xpos;  // new current position
-  Ymouse = ypos;
+  Scene::MouseX = xpos;  // new current position
+  Scene::MouseY = ypos;
 }
 
 void MouseWheel(GLFWwindow *window, double xoffset, double yoffset) {

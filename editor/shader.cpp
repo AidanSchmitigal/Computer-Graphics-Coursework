@@ -24,6 +24,7 @@
 #endif
 
 #include "editor/objects.h"
+#include "editor/scene.h"
 #include "utils/simplex.h"
 #include "utils/texture.h"
 
