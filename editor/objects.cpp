@@ -15,7 +15,7 @@ namespace Objects {
 std::vector<std::shared_ptr<Object>> objects;
 int selectedObject = -1;
 
-const char* objectTypesNames[] = {"Cube", "Sphere", "Cylinder", "Cone", "Torus", "Plane", "Vertical Plane", "Europa Clipper", "Dirt Mound", "Frog", "Garden Sign", "ISS", "Seed Pouch", "Watering Can"};
+const char* objectTypesNames[] = {"Cube", "Sphere", "Cylinder", "Cone", "Torus", "Plane", "Vertical Plane", "Snake", "Europa Clipper", "Dirt Mound", "Frog", "Garden Sign", "ISS", "Seed Pouch", "Watering Can"};
 const ObjectType objectTypes[] = {
     ObjectType::Cube,
     ObjectType::Sphere,
@@ -24,6 +24,7 @@ const ObjectType objectTypes[] = {
     ObjectType::Torus,
     ObjectType::Plane,
     ObjectType::Plane2,
+    ObjectType::Snake,
     ObjectType::EuropaClipper,
     ObjectType::DirtMound,
     ObjectType::Frog,
@@ -98,10 +99,16 @@ void InitLists() {
   OsuGrid2();
   glEndList();
 
+  newList = objectDisplayLists[ObjectType::Snake] = glGenLists(1);
+  printf("Snake\n");
+  glNewList(newList, GL_COMPILE);
+  LoadObjFile("objects/snake.obj");
+  glEndList();
+
   newList = objectDisplayLists[ObjectType::EuropaClipper] = glGenLists(1);
   printf("EuropaClipper\n");
   glNewList(newList, GL_COMPILE);
-  LoadObjFile("objects/clipper.obj");
+  // LoadObjFile("objects/clipper.obj");
   glEndList();
 
   newList = objectDisplayLists[ObjectType::DirtMound] = glGenLists(1);

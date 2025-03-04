@@ -310,18 +310,45 @@ char* SerializeUniform(const Uniform& uniform) {
 
 // MARK: SetShaderUniform
 void SetShaderUniform(Uniform& uniform, GLSLProgram& program) {
-  if (uniform.type == GL_FLOAT) {
+  // // Time-related uniforms
+  // program.SetUniformVariable("uTime", (float)Scene::Time);
+  // program.SetUniformVariable("uTimeLoop", (float)fmod(Scene::Time, 10.0f));
+  // program.SetUniformVariable("uDeltaTime", (float)Scene::DeltaTime);  // Time since last frame
+
+  // // Screen/viewport information
+  // int viewport[4];
+  // glGetIntegerv(GL_VIEWPORT, viewport);
+  // program.SetUniformVariable("uResolution", viewport[2], viewport[3]);
+  // program.SetUniformVariable("uAspectRatio", viewport[2] / (float)viewport[3]);
+
+  // // Mouse/input information
+  // program.SetUniformVariable("uMousePosition", Scene::MouseX, Scene::MouseY);
+  // program.SetUniformVariable("uMouseNormalized", Scene::MouseX / viewport[2], Scene::MouseY / viewport[3]);
+
+  // // Frame counter (useful for certain effects)
+  // static int frameCount = 0;
+  // program.SetUniformVariable("uFrameCount", frameCount++);
+  if (uniform.name == "uTime")
+    program.SetUniformVariable("uTime", (float)Scene::Time);
+  else if (uniform.name == "uTimeDelta")
+    program.SetUniformVariable("uTimeDelta", (float)Scene::DeltaTime);
+  else if (uniform.name == "uTimeLoop")
+    program.SetUniformVariable("uTimeLoop", (float)fmod(Scene::Time, 1.0f));
+  else if (uniform.name == "uTimeLoop10")
+    program.SetUniformVariable("uTimeLoop10", (float)fmod(Scene::Time, 10.0f));
+  else if (uniform.name == "uResolution") {
+    program.SetUniformVariable("uResolution", Scene::Viewport[2], Scene::Viewport[3]);
+  } else if (uniform.name == "uAspectRatio")
+    program.SetUniformVariable("uAspectRatio", Scene::Viewport[2] / (float)Scene::Viewport[3]);
+  else if (uniform.name == "uMousePosition")
+    program.SetUniformVariable("uMousePosition", Scene::MouseX, Scene::MouseY);
+  else if (uniform.name == "uMouseNormalized")
+    program.SetUniformVariable("uMouseNormalized", Scene::MouseX / Scene::Viewport[2], Scene::MouseY / Scene::Viewport[3]);
+  else if (uniform.name == "uFrameCount")
+    program.SetUniformVariable("uFrameCount", Scene::FrameCount);
+
+  else if (uniform.type == GL_FLOAT) {
     auto& v = std::get<float>(uniform.value);
-
-    if (uniform.name == "uTime")
-      v = Scene::Time;
-    else if (uniform.name == "uTimeDelta")
-      v = Scene::DeltaTime;
-    else if (uniform.name == "uTimeLoop")
-      v = fmodf(Scene::Time, 1.f);
-    else if (uniform.name == "uTimeLoop10")
-      v = fmodf(Scene::Time, 10.f);
-
     program.SetUniformVariable((char*)uniform.name.c_str(), v);
   } else if (uniform.type == GL_FLOAT_VEC2) {
     auto& v = std::get<glm::vec2>(uniform.value);
