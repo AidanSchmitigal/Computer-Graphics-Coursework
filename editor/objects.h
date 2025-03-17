@@ -27,20 +27,25 @@ enum class ObjectType { Cube,
                         Torus,
                         Plane,
                         Plane2,
-                        Snake,
-                        EuropaClipper,
-                        DirtMound,
-                        Frog,
-                        GardenSign,
-                        ISS,
-                        SeedPouch,
+                        // Snake,
+                        // EuropaClipper,
+                        // DirtMound,
+                        // Frog,
+                        // GardenSign,
+                        // ISS,
+                        // SeedPouch,
                         WateringCan,
+                        Terrain,
+                        Terrain2,
+                        Terrain4,
+                        Terrain8,
                         NUM_OBJECT_TYPES };
 
 struct Object {
   std::string name;
   glm::mat4 transform;
   bool hidden = false;
+  bool deletable = true;
   ObjectType type;
   std::weak_ptr<ShaderEditor::Shader> shader;
 
@@ -66,6 +71,7 @@ void EditTransform(float* cameraView, float* cameraProjection, float* matrix);
 void DisplayGizmo(float* cameraView, float* cameraProjection);
 void DisplayObjects();
 void InitLists();
+std::weak_ptr<Object> getFirstObject();
 std::weak_ptr<Object> getSelectedObject();
 
 }  // namespace Objects

@@ -8,6 +8,7 @@
 #include "objects/osugrid.cpp"
 #include "objects/osusphere.cpp"
 #include "objects/osutorus.cpp"
+#include "terrain.h"
 #include "utils/loadobjfile.h"
 
 namespace Objects {
@@ -15,7 +16,23 @@ namespace Objects {
 std::vector<std::shared_ptr<Object>> objects;
 int selectedObject = -1;
 
-const char* objectTypesNames[] = {"Cube", "Sphere", "Cylinder", "Cone", "Torus", "Plane", "Vertical Plane", "Snake", "Europa Clipper", "Dirt Mound", "Frog", "Garden Sign", "ISS", "Seed Pouch", "Watering Can"};
+const char* objectTypesNames[] = {
+    "Cube",
+    "Sphere",
+    "Cylinder",
+    "Cone",
+    "Torus",
+    "Plane",
+    "Vertical Plane",
+    // "Snake",
+    // "Europa Clipper",
+    // "Dirt Mound",
+    // "Frog",
+    // "Garden Sign",
+    // "ISS",
+    // "Seed Pouch",
+    "Watering Can",
+    "Terrain"};
 const ObjectType objectTypes[] = {
     ObjectType::Cube,
     ObjectType::Sphere,
@@ -24,15 +41,19 @@ const ObjectType objectTypes[] = {
     ObjectType::Torus,
     ObjectType::Plane,
     ObjectType::Plane2,
-    ObjectType::Snake,
-    ObjectType::EuropaClipper,
-    ObjectType::DirtMound,
-    ObjectType::Frog,
-    ObjectType::GardenSign,
-    ObjectType::ISS,
+    // ObjectType::Snake,
+    // ObjectType::EuropaClipper,
+    // ObjectType::DirtMound,
+    // ObjectType::Frog,
+    // ObjectType::GardenSign,
+    // ObjectType::ISS,
     // ObjectType::Helicopter,
-    ObjectType::SeedPouch,
+    // ObjectType::SeedPouch,
     ObjectType::WateringCan,
+    ObjectType::Terrain,
+    ObjectType::Terrain2,
+    ObjectType::Terrain4,
+    ObjectType::Terrain8,
 };
 
 std::unordered_map<ObjectType, GLuint> objectDisplayLists = {};
@@ -50,10 +71,19 @@ std::weak_ptr<Object> getSelectedObject() {
   return objects[selectedObject];
 }
 
-void InitLists() {
-  fprintf(stderr, "Starting InitLists.\n");
+std::weak_ptr<Object> getFirstObject() {
+  if (objects.size() == 0) return std::weak_ptr<Object>();
+  return objects[0];
+}
 
-  objects.push_back(std::make_unique<Object>("Sphere", ObjectType::Sphere));
+void InitLists() {
+  fprintf(stderr, "Starting InitObjectLists.\n");
+
+  objects.push_back(std::make_unique<Object>("Terrain", ObjectType::Terrain));
+  auto terrainObject = objects.back();
+  terrainObject->transform = glm::scale(glm::mat4(1.f), glm::vec3(3.f));
+  terrainObject->deletable = false;
+  terrainObject->shader = ShaderEditor::getShader("terrain");
 
   // create the object:
 
@@ -99,57 +129,81 @@ void InitLists() {
   OsuGrid2();
   glEndList();
 
-  newList = objectDisplayLists[ObjectType::Snake] = glGenLists(1);
-  printf("Snake\n");
-  glNewList(newList, GL_COMPILE);
-  LoadObjFile("objects/snake.obj");
-  glEndList();
-
-  newList = objectDisplayLists[ObjectType::EuropaClipper] = glGenLists(1);
-  printf("EuropaClipper\n");
-  glNewList(newList, GL_COMPILE);
-  // LoadObjFile("objects/clipper.obj");
-  glEndList();
-
-  newList = objectDisplayLists[ObjectType::DirtMound] = glGenLists(1);
-  printf("DirtMound\n");
-  glNewList(newList, GL_COMPILE);
-  LoadObjFile("objects/dirt_mound.obj");
-  glEndList();
-
-  newList = objectDisplayLists[ObjectType::Frog] = glGenLists(1);
-  printf("Frog\n");
-  glNewList(newList, GL_COMPILE);
-  LoadObjFile("objects/dumbfrog.obj");
-  glEndList();
-
-  newList = objectDisplayLists[ObjectType::GardenSign] = glGenLists(1);
-  printf("GardenSign\n");
-  glNewList(newList, GL_COMPILE);
-  LoadObjFile("objects/gardensign.obj");
-  glEndList();
-
-  newList = objectDisplayLists[ObjectType::ISS] = glGenLists(1);
-  printf("ISS\n");
-  glNewList(newList, GL_COMPILE);
-  // LoadObjFile("objects/iss.obj");
-  glEndList();
-
-  // newList = objectDisplayLists[ObjectType::Helicopter] = glGenLists(1);
+  // newList = objectDisplayLists[ObjectType::Snake] = glGenLists(1);
+  // printf("Snake\n");
   // glNewList(newList, GL_COMPILE);
-  // LoadObjFile("objects/helicopter.obj");
+  // // LoadObjFile("objects/snake.obj");
   // glEndList();
 
-  newList = objectDisplayLists[ObjectType::SeedPouch] = glGenLists(1);
-  printf("SeedPouch\n");
-  glNewList(newList, GL_COMPILE);
-  LoadObjFile("objects/seed_pouch.obj");
-  glEndList();
+  // newList = objectDisplayLists[ObjectType::EuropaClipper] = glGenLists(1);
+  // printf("EuropaClipper\n");
+  // glNewList(newList, GL_COMPILE);
+  // // LoadObjFile("objects/clipper.obj");
+  // glEndList();
+
+  // newList = objectDisplayLists[ObjectType::DirtMound] = glGenLists(1);
+  // printf("DirtMound\n");
+  // glNewList(newList, GL_COMPILE);
+  // // LoadObjFile("objects/dirt_mound.obj");
+  // glEndList();
+
+  // newList = objectDisplayLists[ObjectType::Frog] = glGenLists(1);
+  // printf("Frog\n");
+  // glNewList(newList, GL_COMPILE);
+  // // LoadObjFile("objects/dumbfrog.obj");
+  // glEndList();
+
+  // newList = objectDisplayLists[ObjectType::GardenSign] = glGenLists(1);
+  // printf("GardenSign\n");
+  // glNewList(newList, GL_COMPILE);
+  // // LoadObjFile("objects/gardensign.obj");
+  // glEndList();
+
+  // newList = objectDisplayLists[ObjectType::ISS] = glGenLists(1);
+  // printf("ISS\n");
+  // glNewList(newList, GL_COMPILE);
+  // // LoadObjFile("objects/iss.obj");
+  // glEndList();
+
+  // // newList = objectDisplayLists[ObjectType::Helicopter] = glGenLists(1);
+  // // glNewList(newList, GL_COMPILE);
+  // // LoadObjFile("objects/helicopter.obj");
+  // // glEndList();
+
+  // newList = objectDisplayLists[ObjectType::SeedPouch] = glGenLists(1);
+  // printf("SeedPouch\n");
+  // glNewList(newList, GL_COMPILE);
+  // // LoadObjFile("objects/seed_pouch.obj");
+  // glEndList();
 
   newList = objectDisplayLists[ObjectType::WateringCan] = glGenLists(1);
   printf("WateringCan\n");
   glNewList(newList, GL_COMPILE);
   LoadObjFile("objects/watering_can.obj");
+  glEndList();
+
+  newList = objectDisplayLists[ObjectType::Terrain] = glGenLists(1);
+  printf("Terrain\n");
+  glNewList(newList, GL_COMPILE);
+  OsuGrid(100.0f, 100.0f);
+  glEndList();
+
+  newList = objectDisplayLists[ObjectType::Terrain2] = glGenLists(1);
+  printf("Terrain2\n");
+  glNewList(newList, GL_COMPILE);
+  OsuGrid(200.0f, 200.0f);
+  glEndList();
+
+  newList = objectDisplayLists[ObjectType::Terrain4] = glGenLists(1);
+  printf("Terrain4\n");
+  glNewList(newList, GL_COMPILE);
+  OsuGrid(400.0f, 400.0f);
+  glEndList();
+
+  newList = objectDisplayLists[ObjectType::Terrain8] = glGenLists(1);
+  printf("Terrain8\n");
+  glNewList(newList, GL_COMPILE);
+  OsuGrid(800.0f, 800.0f);
   glEndList();
 }
 
@@ -240,6 +294,7 @@ void Object::Display() {
 }
 
 void DisplayObjects() {
+  TerrainEditor::ModifyShaders();
   for (int i = 0; i < objects.size(); i++) {
     objects[i]->Display();
   }

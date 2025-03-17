@@ -31,7 +31,7 @@ struct Light {
 
 std::vector<Light> lights;
 float ambientLight[4] = {0.3f, 0.3f, 0.3f, 1.f};
-float clearColor[4] = {0.45f, 0.55f, 0.60f, 1.00f};
+float clearColor[4] = {118.0f / 255.0f, 181.0f / 255.0f, 213.0f / 255.0f, 1.0f};
 
 void ShowLightsPanel() {
   if (!viewLightsPanel) return;

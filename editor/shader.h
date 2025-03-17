@@ -32,6 +32,7 @@ struct Shader {
   GLSLProgram program;
   long readTime;
   std::string error;
+  bool uniformsChanged = true;
 
   ~Shader() {
     program.Delete();
@@ -43,7 +44,9 @@ struct Shader {
   void unUse();
 };
 
+void showShaderError(const std::shared_ptr<Shader>& shader);
 void checkShaderFiles();
 void InitShaders();
+std::shared_ptr<Shader> getShader(std::string name);
 
 }  // namespace ShaderEditor

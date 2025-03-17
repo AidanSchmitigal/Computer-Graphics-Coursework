@@ -98,6 +98,7 @@ void findShaders() {
         shader->id = shaders.size();
         strncpy(shader->name, entry.first.c_str(), 256);
         shader->files = entry.second;
+        shader->uniformsChanged = true;
 
         existingShader = shaders.insert(shaders.end(), std::move(shader));
       }
@@ -115,6 +116,7 @@ void findShaders() {
 void compileShaderProgram(std::shared_ptr<Shader>& shader) {
   printf("Compiling shader: %s\n", shader->name);
   shader->error.clear();
+  shader->uniformsChanged = true;
 
   std::array<const char*, 6> shaderFiles = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
   int shaderFileIndex = 0;
@@ -188,6 +190,7 @@ void compileShaderProgram(std::shared_ptr<Shader>& shader) {
   delete[] lname;
   shader->program.UnUse();
   shader->program.Use();
+  shader->uniformsChanged = true;
 }
 
 std::chrono::time_point<std::chrono::system_clock> lastCheckTime = std::chrono::system_clock::now();
@@ -356,6 +359,8 @@ void ShowShaderPropertiesPanel() {
       // continue;
     }
 
+    bool dirty = shader->uniformsChanged;
+
     ImGui::Text("Name: %s", uniform.name.c_str());
     ImGui::Text("Type: %s", GetGLTypeString(uniform.type).c_str());
 
@@ -366,15 +371,18 @@ void ShowShaderPropertiesPanel() {
     if (uniform.type == GL_FLOAT) {
       auto& v = std::get<float>(uniform.value);
       if (ImGui::DragFloat(uniform.name.c_str(), &v, 0.1f)) {
+        dirty |= true;
       }
     } else if (uniform.type == GL_FLOAT_VEC2) {
       auto& v = std::get<glm::vec2>(uniform.value);
       if (ImGui::DragFloat2(uniform.name.c_str(), glm::value_ptr(v), 0.1f)) {
+        dirty |= true;
         uniform.value = v;
       }
     } else if (uniform.type == GL_FLOAT_VEC3) {
       auto& v = std::get<glm::vec3>(uniform.value);
       if (ImGui::DragFloat3(uniform.name.c_str(), glm::value_ptr(v), 0.1f)) {
+        dirty |= true;
         uniform.value = v;
       }
       if (ImGui::ColorEdit3(uniform.name.c_str(), glm::value_ptr(v))) {
@@ -383,93 +391,113 @@ void ShowShaderPropertiesPanel() {
     } else if (uniform.type == GL_FLOAT_VEC4) {
       auto& v = std::get<glm::vec4>(uniform.value);
       if (ImGui::DragFloat4(uniform.name.c_str(), glm::value_ptr(v), 0.1f)) {
+        dirty |= true;
         uniform.value = v;
       }
       if (ImGui::ColorEdit4(uniform.name.c_str(), glm::value_ptr(v))) {
+        dirty |= true;
         uniform.value = v;
       }
     } else if (uniform.type == GL_DOUBLE) {
       auto& v = std::get<double>(uniform.value);
       if (ImGui::InputDouble(uniform.name.c_str(), &v)) {
+        dirty |= true;
         uniform.value = v;
       }
     } else if (uniform.type == GL_INT) {
       auto& v = std::get<int>(uniform.value);
       if (ImGui::DragInt(uniform.name.c_str(), &v)) {
+        dirty |= true;
         uniform.value = v;
       }
     } else if (uniform.type == GL_INT_VEC2) {
       auto& v = std::get<glm::ivec2>(uniform.value);
       if (ImGui::DragInt2(uniform.name.c_str(), glm::value_ptr(v))) {
+        dirty |= true;
         uniform.value = v;
       }
     } else if (uniform.type == GL_INT_VEC3) {
       auto& v = std::get<glm::ivec3>(uniform.value);
       if (ImGui::DragInt3(uniform.name.c_str(), glm::value_ptr(v))) {
+        dirty |= true;
         uniform.value = v;
       }
       float vi[3] = {static_cast<float>(v.x) / 255.0f, static_cast<float>(v.y) / 255.0f, static_cast<float>(v.z) / 255.0f};
       if (ImGui::ColorEdit3(uniform.name.c_str(), vi)) {
+        dirty |= true;
         v = glm::ivec3(static_cast<int>(vi[0] * 255), static_cast<int>(vi[1] * 255), static_cast<int>(vi[2] * 255));
         uniform.value = v;
       }
     } else if (uniform.type == GL_INT_VEC4) {
       auto& v = std::get<glm::ivec4>(uniform.value);
       if (ImGui::DragInt4(uniform.name.c_str(), glm::value_ptr(v))) {
+        dirty |= true;
         uniform.value = v;
       }
       float vi[4] = {static_cast<float>(v.x) / 255.0f, static_cast<float>(v.y) / 255.0f, static_cast<float>(v.z) / 255.0f, static_cast<float>(v.w) / 255.0f};
       if (ImGui::ColorEdit4(uniform.name.c_str(), vi)) {
+        dirty |= true;
         v = glm::ivec4(static_cast<int>(vi[0]) * 255, static_cast<int>(vi[1]) * 255, static_cast<int>(vi[2]) * 255, static_cast<int>(vi[3]) * 255);
         uniform.value = v;
       }
     } else if (uniform.type == GL_UNSIGNED_INT) {
       auto& v = std::get<uint>(uniform.value);
       if (ImGui::DragInt(uniform.name.c_str(), (int*)&v)) {
+        dirty |= true;
         uniform.value = v;
       }
     } else if (uniform.type == GL_BOOL) {
       auto& v = std::get<bool>(uniform.value);
       if (ImGui::Checkbox(uniform.name.c_str(), &v)) {
+        dirty |= true;
         uniform.value = v;
       }
     } else if (uniform.type == GL_BOOL_VEC2) {
       auto& v = std::get<glm::bvec2>(uniform.value);
       if (ImGui::Checkbox(uniform.name.c_str(), &v.x)) {
+        dirty |= true;
         uniform.value = v;
       }
       ImGui::SameLine();
       if (ImGui::Checkbox(uniform.name.c_str(), &v.y)) {
+        dirty |= true;
         uniform.value = v;
       }
     } else if (uniform.type == GL_BOOL_VEC3) {
       auto& v = std::get<glm::bvec3>(uniform.value);
       if (ImGui::Checkbox(uniform.name.c_str(), &v.x)) {
+        dirty |= true;
         uniform.value = v;
       }
       ImGui::SameLine();
       if (ImGui::Checkbox(uniform.name.c_str(), &v.y)) {
+        dirty |= true;
         uniform.value = v;
       }
       ImGui::SameLine();
       if (ImGui::Checkbox(uniform.name.c_str(), &v.z)) {
+        dirty |= true;
         uniform.value = v;
       }
     } else if (uniform.type == GL_BOOL_VEC4) {
       auto& v = std::get<glm::bvec4>(uniform.value);
       if (ImGui::Checkbox(uniform.name.c_str(), &v.x)) {
+        dirty |= true;
         uniform.value = v;
       }
       ImGui::SameLine();
       if (ImGui::Checkbox(uniform.name.c_str(), &v.y)) {
+        dirty |= true;
         uniform.value = v;
       }
       ImGui::SameLine();
       if (ImGui::Checkbox(uniform.name.c_str(), &v.z)) {
+        dirty |= true;
         uniform.value = v;
       }
       ImGui::SameLine();
       if (ImGui::Checkbox(uniform.name.c_str(), &v.w)) {
+        dirty |= true;
         uniform.value = v;
       }
     } else if (uniform.type == GL_SAMPLER_1D) {
@@ -488,6 +516,7 @@ void ShowShaderPropertiesPanel() {
       if (ImGui::BeginCombo(uniform.name.c_str(), "name")) {
         for (int i = 0; i < textures2DNames.size(); i++) {
           if (ImGui::Selectable(textures2DNames[i], v == textures2DBindLocations[i])) {
+            dirty |= true;
             v = textures2DBindLocations[i];
           }
         }
@@ -498,6 +527,7 @@ void ShowShaderPropertiesPanel() {
       if (ImGui::BeginCombo(uniform.name.c_str(), textures3DNames[v])) {
         for (int i = 0; i < textures3DNames.size(); i++) {
           if (ImGui::Selectable(textures3DNames[i], v == textures3DBindLocations[i])) {
+            dirty |= true;
             v = textures3DBindLocations[i];
           }
         }
@@ -525,10 +555,12 @@ void Shader::use() {
 
   program.Use();
 
-  // Set Uniforms
-  for (int i = 0; i < uniforms.size(); i++) {
-    auto& uniform = uniforms[i];
-    SetShaderUniform(uniform, program);
+  if (uniformsChanged) {
+    // Set Uniforms
+    for (int i = 0; i < uniforms.size(); i++) {
+      auto& uniform = uniforms[i];
+      SetShaderUniform(uniform, program);
+    }
   }
 }
 
@@ -544,6 +576,14 @@ void Shader::unUse() {
 // MARK: Register ImGui Settings Handler
 void InitShaders() {
   findShaders();
+}
+
+std::shared_ptr<Shader> getShader(std::string name) {
+  auto index = std::find_if(shaders.begin(), shaders.end(), [&name](const std::shared_ptr<Shader>& shader) {
+    return shader->name == name;
+  });
+  if (index == shaders.end()) return nullptr;
+  return *index;
 }
 
 }  // namespace ShaderEditor

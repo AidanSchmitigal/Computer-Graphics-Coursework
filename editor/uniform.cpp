@@ -181,7 +181,7 @@ void InitializeUniform(Uniform& uniform) {
   }
 }
 
-// MARK: Serialize Uniform
+/* // MARK: Serialize Uniform
 char* SerializeUniform(const Uniform& uniform) {
   char* str = new char[1024];
   switch (uniform.type) {
@@ -307,6 +307,7 @@ char* SerializeUniform(const Uniform& uniform) {
   }
   return str;
 }
+ */
 
 // MARK: SetShaderUniform
 void SetShaderUniform(Uniform& uniform, GLSLProgram& program) {
@@ -328,6 +329,7 @@ void SetShaderUniform(Uniform& uniform, GLSLProgram& program) {
   // // Frame counter (useful for certain effects)
   // static int frameCount = 0;
   // program.SetUniformVariable("uFrameCount", frameCount++);
+
   if (uniform.name == "uTime")
     program.SetUniformVariable("uTime", (float)Scene::Time);
   else if (uniform.name == "uTimeDelta")

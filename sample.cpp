@@ -41,6 +41,7 @@
 #include "editor/scene.h"
 #include "editor/shader.h"
 #include "editor/style.h"
+#include "editor/terrain.h"
 #include "glm/gtc/matrix_inverse.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
@@ -499,6 +500,7 @@ void DisplayImGui() {
   ShaderEditor::ShowShaderListPanel();
   ShaderEditor::ShowShaderEditorPanel();
   ShaderEditor::ShowShaderPropertiesPanel();
+  TerrainEditor::ShowLayersPanel();
   Debug::ShowDebugPanel();
   if (Debug::viewDebugPanel && ImGui::Begin("Debug")) {
     ImGui::DragFloat("Scale", &Scale, 0.01f, 0.f, 10.f);
@@ -710,28 +712,24 @@ static void UserData_ReadLine(ImGuiContext *, ImGuiSettingsHandler *, void *entr
 
   if (strncmp(line, "ViewDebugPanel =", 16) == 0) {
     Debug::viewDebugPanel = atoi(line + 17);
-    // printf("ViewDebugPanel: %d\n", Debug::viewDebugPanel);
   } else if (strncmp(line, "ViewDemoWindow =", 16) == 0) {
     Debug::viewDemoWindow = atoi(line + 17);
-    // printf("ViewDemoWindow: %d\n", Debug::viewDemoWindow);
   } else if (strncmp(line, "ViewAssetBrowser =", 18) == 0) {
     Assets::viewAssetBrowser = atoi(line + 19);
-    // printf("ViewAssetBrowser: %d\n", Assets::viewAssetBrowser);
   } else if (strncmp(line, "ViewLightsPanel =", 17) == 0) {
     LightsEditor::viewLightsPanel = atoi(line + 18);
-    // printf("ViewLightsPanel: %d\n", LightsEditor::viewLightsPanel);
-  } else if (strncmp(line, "ViewConsolePanel =", 17) == 0) {
-    ConsoleWindow::viewConsolePanel = atoi(line + 18);
-    // printf("ViewConsolePanel: %d\n", ConsoleWindow::viewConsolePanel);
+  } else if (strncmp(line, "ViewConsolePanel =", 18) == 0) {
+    ConsoleWindow::viewConsolePanel = atoi(line + 19);
   } else if (strncmp(line, "ViewOverlay =", 13) == 0) {
     Debug::viewOverlay = atoi(line + 14);
-    // printf("ViewOverlay: %d\n", Debug::viewOverlay);
   } else if (strncmp(line, "ViewOverlayLocation =", 21) == 0) {
     Debug::overlayLocation = atoi(line + 22);
-    // printf("ViewOverlayLocation: %d\n", Debug::overlayLocation);
-    // } else if (strncmp(line, "ViewShaderEditorPanel =", 23) == 0) {
-    //   ShaderEditor::viewShaderEditorPanel = atoi(line + 24);
-    // printf("ViewShaderEditorPanel: %d\n", ShaderEditor::viewShaderEditorPanel);
+  } else if (strncmp(line, "ViewShaderListPanel =", 21) == 0) {
+    ShaderEditor::viewShaderListPanel = atoi(line + 22);
+  } else if (strncmp(line, "ViewShaderPropertiesPanel =", 27) == 0) {
+    ShaderEditor::viewShaderPropertiesPanel = atoi(line + 28);
+  } else if (strncmp(line, "ViewObjectPanel =", 17) == 0) {
+    Objects::viewObjectsPanel = atoi(line + 18);
   } else {
     printf("Unknown Line: %s\n", line);
   }
@@ -747,7 +745,9 @@ static void UserData_WriteAll(ImGuiContext *ctx, ImGuiSettingsHandler *handler, 
   buf->appendf("%s = %d\n", "ViewConsolePanel", ConsoleWindow::viewConsolePanel);
   buf->appendf("%s = %d\n", "ViewOverlay", Debug::viewOverlay);
   buf->appendf("%s = %d\n", "ViewOverlayLocation", Debug::overlayLocation);
-  // buf->appendf("%s = %d\n", "ViewShaderEditorPanel", ShaderEditor::viewShaderEditorPanel);
+  buf->appendf("%s = %d\n", "ViewShaderListPanel", ShaderEditor::viewShaderListPanel);
+  buf->appendf("%s = %d\n", "ViewShaderPropertiesPanel", ShaderEditor::viewShaderPropertiesPanel);
+  buf->appendf("%s = %d\n", "ViewObjectPanel", Objects::viewObjectsPanel);
   buf->append("\n");
 }
 
